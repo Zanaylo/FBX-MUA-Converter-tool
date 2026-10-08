@@ -1,0 +1,99 @@
+<Window x:Class="FbxToMua.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:FbxToMua.App.ViewModels"
+        Title="FbxToMua - stages between French-Bread and BlazBlue"
+        Width="1100" Height="760" MinWidth="900" MinHeight="600"
+        WindowStartupLocation="CenterScreen">
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="8" />
+            <RowDefinition Height="150" />
+        </Grid.RowDefinitions>
+
+        <TabControl Grid.Row="0">
+            <TabItem Header="French-Bread  →  BBCF / BBTAG" DataContext="{Binding Export}">
+                <Grid Margin="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="24" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <DockPanel Grid.Column="0">
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Text="1. Where the stage comes from" />
+                        <DockPanel DockPanel.Dock="Top">
+                            <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseSource}" />
+                            <ComboBox ItemsSource="{Binding Sources}" SelectedItem="{Binding Source}" />
+                        </DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Text="2. Stage" />
+                        <TextBox DockPanel.Dock="Bottom" Text="{Binding StageName, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Caption}" Text="Name shown in the record" />
+                        <ListBox ItemsSource="{Binding Stages}" SelectedItem="{Binding Stage}" DisplayMemberPath="Shown" ItemContainerStyle="{StaticResource Compact}" />
+                    </DockPanel>
+
+                    <DockPanel Grid.Column="2">
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Text="3. Game it goes into" />
+                        <DockPanel DockPanel.Dock="Top">
+                            <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Game folder..." Command="{Binding BrowseTarget}" />
+                            <ComboBox ItemsSource="{Binding Games}" SelectedValuePath="Game" SelectedValue="{Binding Target}" />
+                        </DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Hint}" Text="{Binding TargetFolder}" />
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Text="4. Stage it replaces" />
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,12,0,0">
+                            <Button Style="{StaticResource Action}" Content="Install in game" Command="{Binding Install}" />
+                            <Button Style="{StaticResource Action}" Content="Restore original" Command="{Binding Restore}" />
+                            <Button Style="{StaticResource Action}" Content="Export files only..." Command="{Binding ExportFiles}" />
+                        </StackPanel>
+                        <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}"
+                                   Text="The first install over a stage backs it up; Restore puts the original back byte for byte. Retail BBTAG (asset folder) is written encrypted, the way the game reads it." />
+                        <ListBox ItemsSource="{Binding Targets}" SelectedItem="{Binding Replace}" DisplayMemberPath="Shown" ItemContainerStyle="{StaticResource Compact}" />
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="BBTAG / BBCF / P4U2  →  UNI2" DataContext="{Binding Import}">
+                <Grid Margin="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="24" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <DockPanel Grid.Column="0">
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Text="1. Where the stage comes from" />
+                        <DockPanel DockPanel.Dock="Top">
+                            <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseSource}" />
+                            <ComboBox ItemsSource="{Binding Sources}" SelectedItem="{Binding Source}" />
+                        </DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Text="2. Stage" />
+                        <ListBox ItemsSource="{Binding Stages}" SelectedItem="{Binding Stage}" DisplayMemberPath="Shown" ItemContainerStyle="{StaticResource Compact}" />
+                    </DockPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Style="{StaticResource Caption}" Text="3. UNDER NIGHT IN-BIRTH II folder" />
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Browse..." Command="{Binding BrowseUni2}" />
+                            <TextBox Text="{Binding Uni2Folder, UpdateSourceTrigger=PropertyChanged}" />
+                        </DockPanel>
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="These stages play through the UNI2 Improvement Mod: their lamps, flipbooks, scrolling water and particles run in its runtime. The stage goes into UNI2-IM\Mods\bg under the next free number." />
+                        <TextBlock Style="{StaticResource Caption}" Text="Name in the stage list" />
+                        <TextBox Text="{Binding StageName, UpdateSourceTrigger=PropertyChanged}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                            <Button Style="{StaticResource Action}" Content="Install into UNI2-IM" Command="{Binding InstallIntoMod}" />
+                            <Button Style="{StaticResource Action}" Content="Stage folder only..." Command="{Binding ExportFolderOnly}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <ListBox Grid.Row="2" ItemsSource="{Binding Log.Lines}" FontFamily="Consolas" ItemContainerStyle="{StaticResource Compact}" />
+    </Grid>
+</Window>

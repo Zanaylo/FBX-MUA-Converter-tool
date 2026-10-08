@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+*.user
+artifacts/
+publish/
+__pycache__/
+*.pyc
+blender/*.zip

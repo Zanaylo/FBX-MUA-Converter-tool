@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FbxToMua.Core/FbxToMua.Core.csproj" />
+    <Project Path="src/FbxToMua.Cli/FbxToMua.Cli.csproj" />
+    <Project Path="src/FbxToMua.App/FbxToMua.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FbxToMua.Core.Tests/FbxToMua.Core.Tests.csproj" />
+  </Folder>
+</Solution>
