@@ -113,3 +113,25 @@ Each one comes out as a single `.exe` that doesn't need .NET installed on the us
 | `src/FbxToMua.Cli` | the command line |
 | `tests/FbxToMua.Core.Tests` | unit tests (xUnit) |
 | `blender/` | the add-ons |
+
+---
+
+## Credits
+
+- [UNI2-Improvement-Mod](https://github.com/Zanaylo/UNI2-Improvement-Mod) - someone made it :)
+- [GeoArcSysAIOCLITool](https://github.com/Geordan9/GeoArcSysAIOCLITool) by Geordan9 - the
+  ArcSys MD5 crypt keys of BBTAG and P4U2, and the `FPAC` extractions the archive reader was checked
+  against
+- [MBTL.BIN.Tool](https://github.com/Ekey/MBTL.BIN.Tool) by Ekey - MBTL's `dataNNN.bin` archives and
+  their key
+- [UNIB.Data.Tool](https://github.com/Ekey/UNIB.Data.Tool) by Ekey - UNI2's `d` archive
+- [undernightinbirth](https://github.com/Fatih120/undernightinbirth) - the community documentation
+  of UNI's files
+- [Blender-MBTL-BG-IO](https://github.com/Eiton/Blender-MBTL-BG-IO) by Eiton - its `fbx.bin.hexpat`
+  confirmed the `bg.fbx.bin` layout
+- The community BlazBlue MUA plugin for [Noesis](https://github.com/tl000000/NoesisMuaPlugin)
+- **Hikari** - for all the help with stages
+- [Under Night BR](https://discord.gg/Az7uQUU)
+
+UNDER NIGHT IN-BIRTH, MELTY BLOOD and DFCI belong to French-Bread and their publishers; BLAZBLUE and
+Persona 4 Arena belong to Arc System Works and ATLUS. This is just a fan tool... have fun :)
