@@ -1,4 +1,3 @@
-using FbxToMua.Core.Export;
 using FbxToMua.Core.Formats.Fpac;
 using FbxToMua.Core.Install;
 
@@ -43,42 +42,32 @@ public class InstallRulesUnitTest
     }
 
     [Fact]
-    public void Loadable_BbcfWithAllFourEntries_Loads()
+    public void Loadable_PlainAndPackedWithAllFourEntries_Loads()
     {
         // Arrange
-        byte[] scene = Fpac.Pack(Complete());
+        byte[] plain = Complete();
+        byte[] packed = Fpac.Pack(plain);
 
         // Act
-        bool loadable = InstallRules.Loadable(ArcGame.Bbcf, scene);
+        bool plainLoadable = InstallRules.Loadable(plain);
+        bool packedLoadable = InstallRules.Loadable(packed);
 
         // Assert
-        Assert.True(loadable);
+        Assert.True(plainLoadable);
+        Assert.True(packedLoadable);
     }
 
     [Fact]
-    public void Loadable_BbcfWithoutCameraFolder_Crashes()
+    public void Loadable_WithoutCameraFolder_Crashes()
     {
         // Arrange
         byte[] scene = Cameraless();
 
         // Act
-        bool loadable = InstallRules.Loadable(ArcGame.Bbcf, scene);
+        bool loadable = InstallRules.Loadable(scene);
 
         // Assert
         Assert.False(loadable);
-    }
-
-    [Fact]
-    public void Loadable_BbtagWithoutCameraFolder_Loads()
-    {
-        // Arrange
-        byte[] scene = Cameraless();
-
-        // Act
-        bool loadable = InstallRules.Loadable(ArcGame.Bbtag, scene);
-
-        // Assert
-        Assert.True(loadable);
     }
 
     [Fact]
@@ -88,7 +77,7 @@ public class InstallRulesUnitTest
         byte[] scene = Empty;
 
         // Act
-        bool loadable = InstallRules.Loadable(ArcGame.Bbtag, scene);
+        bool loadable = InstallRules.Loadable(scene);
 
         // Assert
         Assert.False(loadable);

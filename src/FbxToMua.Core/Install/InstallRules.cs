@@ -5,8 +5,8 @@ namespace FbxToMua.Core.Install;
 
 public static class InstallRules
 {
-    private static readonly string[] SharedEntries = [StagePackager.ModelFolder, StagePackager.ScriptFolder];
-    private static readonly string[] BbcfEntries = [StagePackager.MotionFolder, StagePackager.CameraFolder];
+    private static readonly string[] RequiredEntries =
+        [StagePackager.ModelFolder, StagePackager.ScriptFolder, StagePackager.MotionFolder, StagePackager.CameraFolder];
 
     public static string ModelName(byte[] scene)
     {
@@ -21,18 +21,10 @@ public static class InstallRules
         return string.Empty;
     }
 
-    public static bool Loadable(ArcGame game, byte[] scene)
+    public static bool Loadable(byte[] scene)
     {
         IReadOnlyList<string> names = Fpac.Names(scene);
 
-        if (!HoldsAll(names, SharedEntries))
-            return false;
-
-        return game != ArcGame.Bbcf || HoldsAll(names, BbcfEntries);
-    }
-
-    private static bool HoldsAll(IReadOnlyList<string> names, string[] wanted)
-    {
-        return wanted.All(one => names.Any(name => string.Equals(name, one, StringComparison.OrdinalIgnoreCase)));
+        return RequiredEntries.All(one => names.Any(name => string.Equals(name, one, StringComparison.OrdinalIgnoreCase)));
     }
 }

@@ -92,7 +92,7 @@ public class StageExporterUnitTest
     }
 
     [Fact]
-    public void Package_Bbtag_StaysPlainWithThreeSceneEntries()
+    public void Package_Bbtag_StaysPlainWithTheFourEntriesTheGameLooksUp()
     {
         // Arrange
         ExportResult export = SmallExport();
@@ -102,7 +102,9 @@ public class StageExporterUnitTest
 
         // Assert
         Assert.True(LittleEndian.Starts(archives.Scene, "FPAC"));
-        Assert.Equal(["mdl.pac", "scr.pac", "mot.pac"], Fpac.Names(archives.Scene));
+        Assert.Equal(["mdl.pac", "scr.pac", "mot.pac", "cammot.pac"], Fpac.Names(archives.Scene));
+        Assert.True(InstallRules.Loadable(archives.Scene));
+        Assert.NotNull(Fpac.Named(Fpac.Walk(archives.Scene), "small_cam_000.mmot"));
     }
 
     [Fact]
@@ -119,7 +121,7 @@ public class StageExporterUnitTest
         Assert.True(LittleEndian.Starts(bbcf.Geometry, "DFASFPAC"));
         Assert.True(LittleEndian.Starts(bbcf.Art, "DFASFPAC"));
         Assert.Equal(["mdl.pac", "scr.pac", "mot.pac", "cammot.pac"], Fpac.Names(bbcf.Scene));
-        Assert.True(InstallRules.Loadable(ArcGame.Bbcf, bbcf.Scene));
+        Assert.True(InstallRules.Loadable(bbcf.Scene));
         Assert.Equal("small", InstallRules.ModelName(bbcf.Scene));
         Assert.NotNull(Fpac.Named(Fpac.Walk(bbcf.Scene), "small_cam_000.mmot"));
     }

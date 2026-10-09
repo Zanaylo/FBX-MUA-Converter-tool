@@ -24,10 +24,8 @@ public static class StagePackager
             new(ModelFolder, Folder([new ExportFile(modelFile, result.Bare)])),
             new(ScriptFolder, Folder(result.Scripts)),
             new(MotionFolder, Folder(result.Motions)),
+            new(CameraFolder, Folder([new ExportFile(IntroCamera.FileName(model), IntroCamera.Still(model))])),
         ];
-
-        if (game == ArcGame.Bbcf)
-            scene.Add(new FpacEntry(CameraFolder, Folder([new ExportFile(IntroCamera.FileName(model), IntroCamera.Still(model))])));
 
         ExportArchives plain = new(Fpac.Build(scene), Folder([new ExportFile(modelFile, result.Model)]), Folder(result.Images));
 

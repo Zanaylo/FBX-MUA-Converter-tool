@@ -53,7 +53,7 @@ public sealed class StageInstaller(IInstallRecords records, ISteamLibrary steam)
 
         byte[]? scene = store?.ReadPlain(target, ArchivePart.Scene);
 
-        if (scene is not null && InstallRules.Loadable(game, scene))
+        if (scene is not null && InstallRules.Loadable(scene))
             return InstallRules.ModelName(scene);
 
         return target.Stem.StartsWith(StagePrefix, StringComparison.Ordinal) ? target.Stem[StagePrefix.Length..] : target.Stem;
@@ -134,7 +134,7 @@ public sealed class StageInstaller(IInstallRecords records, ISteamLibrary steam)
 
         byte[]? scene = store.ReadPlain(target, ArchivePart.Scene);
 
-        if (scene is null || !InstallRules.Loadable(game, scene))
+        if (scene is null || !InstallRules.Loadable(scene))
             return $" {target.Stem} was not a working stage, so no backup was made. Verify the game files in Steam to get it back.";
 
         string folder = records.BackupFolder(game, target);

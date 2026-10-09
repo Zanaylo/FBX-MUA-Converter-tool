@@ -32,18 +32,22 @@ Inside the `<stage>.pac` there are more `.pac` files (FPAC nests freely):
 | `mdl.pac` | the `.MUA` without geometry |
 | `scr.pac` | the `.evb` scripts |
 | `mot.pac` | the `.mmot` animations (can be an empty 32-byte FPAC) |
-| `cammot.pac` | the intro camera (BBCF only) |
+| `cammot.pac` | the intro camera (in menus and some `cmn` stages, an empty FPAC) |
 
-### BBCF always needs all four
+### Both games always need all four
 
-This one really crashed BBCF. The first export had no `cammot.pac` (because some BBTAG test stages
-don't have one) and the game closed while loading.
+This one really crashed BBCF, and later BBTAG too. The first export had no `cammot.pac` and BBCF closed
+while loading. BBTAG was left without it for a while, and installing UNI2's Altar of Light and Dark
+over `main_arcana/bg_gyoenjogakuen` crashed it while loading, with the "requested the Runtime to
+terminate it in an unusual way" box.
 
 The reason: the loader looks up `mdl.pac`, `scr.pac`, `mot.pac` and `cammot.pac` by name, and **when
 the name doesn't exist the lookup returns index 0, never -1**. So without `cammot.pac` it hands
 `mdl.pac` to the camera reader, which reads the model as if it were an animation, finds a "2.0" where
 it expected a count, tries to allocate 4 GB and dies with `bad_alloc`. All 57 BBCF stages have the
-four.
+four, and so do all 101 BBTAG ones (the menu and astral stages carry an empty `cammot.pac`, never
+none). The camera bone has no fixed name (BBTAG has `Bone_camera`, `Bone_kaimakucamera` and
+`camera_Bone`), so it's the entry the game needs, not a particular bone.
 
 The intro camera FbxToMua writes is still, on the fight framing: the eye at `(0, 100, -320)`, which
 is where BBCF's shipped cameras end.
@@ -291,6 +295,6 @@ list doesn't name fall back to the UNI2 Improvement Mod's table, then to the fol
 |---|---|---|---|
 | `.pac` | plain FPAC | FPAC inside DFAS (zlib) | plain FPAC |
 | Steam install | encrypted under `asset\` | plain `data\bg` | encrypted, another key |
-| `cammot.pac` | optional | **required** | — |
+| `cammot.pac` | **required** | **required** | — |
 | FbxToMua exports to it | yes | yes | no |
 | FbxToMua imports from it | yes | yes | yes |

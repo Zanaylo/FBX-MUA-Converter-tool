@@ -80,7 +80,7 @@ public sealed class StageInstallerUnitTest : IDisposable
 
         // Assert
         Assert.Equal("castle", InstallRules.ModelName(scene));
-        Assert.True(InstallRules.Loadable(ArcGame.Bbcf, scene));
+        Assert.True(InstallRules.Loadable(scene));
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public sealed class StageInstallerUnitTest : IDisposable
 
         // Assert
         Assert.True(report.Done);
-        Assert.Equal(["mdl.pac", "scr.pac", "mot.pac"], Fpac.Names(scene));
+        Assert.Equal(["mdl.pac", "scr.pac", "mot.pac", "cammot.pac"], Fpac.Names(scene));
         Assert.Equal("castle", InstallRules.ModelName(scene));
     }
 
