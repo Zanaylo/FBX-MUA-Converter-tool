@@ -41,6 +41,21 @@ warns about it.
 
 Importing is the exact inverse, which is why a stage that goes there and back comes out the same.
 
+### Reframing in the viewer
+
+When that framing is wrong for a stage, the app's viewer lets you change it. BBTAG and BBCF move the
+camera and the fighters together, so the viewer moves the stage around them instead, and the export
+bakes it into the vertices (and the 2D layer) after the placement above:
+
+```
+b' = ( s*b - (side, height, -distance) ) * turnY(-turn)
+```
+
+`tilt` is added to `ViewRotationX` and goes into `0x28` in whole degrees, like before. The viewer
+previews it as the camera pitching down around the eye; what the game does with `0x28` hasn't been
+measured, so that part of the preview is an approximation. With no reframe the output is the same,
+byte for byte. The framing is kept per source stage in `%LOCALAPPDATA%\FbxToMua\reframes.json`.
+
 ## Mirror, UV, winding and colour
 
 - **z is mirrored**, not rotated. BBTAG looks the opposite way from UNI2, and a 180° turn around Y

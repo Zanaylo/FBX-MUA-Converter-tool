@@ -2,6 +2,7 @@ using FbxToMua.Core.Formats.Pat;
 using FbxToMua.Core.Binary;
 using FbxToMua.Core.Export;
 using FbxToMua.Core.Formats.Dds;
+using FbxToMua.Core.Formats.Evb;
 using FbxToMua.Core.Formats.FbxEx;
 using FbxToMua.Core.Formats.Fpac;
 using FbxToMua.Core.Formats.Mua;
@@ -231,6 +232,77 @@ public class StageExporterUnitTest
         Assert.True(glow.Pivot[2] < walkers.Pivot[2]);
         Assert.Equal((8, 4), (walkers.Vertices, glow.Vertices));
         Assert.Equal(4, read.Skeletons[walkers.Skeleton].Bones);
+    }
+
+    [Fact]
+    public void Convert_Reframed_MovesEveryStageVertexByTheReframe()
+    {
+        // Arrange
+        Reframe reframe = Reframe.None with { Height = 25.0f, Turn = 15.0f, Scale = 1.5f };
+        MuaReader neutral = MuaReader.Read(SmallExport().Model)!;
+
+        // Act
+        MuaReader moved = MuaReader.Read(StageExporter.Convert(SmallSource() with { Reframe = reframe }).Model)!;
+
+        // Assert
+        for (int v = 0; v < neutral.Meshes[0].Vertices; ++v)
+        {
+            Float3 expected = MatrixMath.Transform(neutral.VertexAt(v).Position, reframe.StageMatrix());
+            Float3 actual = moved.VertexAt(v).Position;
+
+            for (int k = 0; k < 3; ++k)
+                Assert.True(Tolerance.Near(expected[k], actual[k], 1e-5f));
+        }
+    }
+
+    [Fact]
+    public void Convert_Reframed_MovesTheLayerWithTheStage()
+    {
+        // Arrange
+        Reframe reframe = Reframe.None with { Side = 60.0f, Distance = 40.0f };
+        MuaReader neutral = MuaReader.Read(StageExporter.Convert(LayeredSource()).Model)!;
+        MuaReadMesh walkers = neutral.Meshes[2];
+
+        // Act
+        MuaReader moved = MuaReader.Read(StageExporter.Convert(LayeredSource() with { Reframe = reframe }).Model)!;
+
+        // Assert
+        for (int v = walkers.FirstVertex; v < walkers.FirstVertex + walkers.Vertices; ++v)
+        {
+            Float3 expected = MatrixMath.Transform(neutral.VertexAt(v).Position, reframe.StageMatrix());
+            Float3 actual = moved.VertexAt(v).Position;
+
+            for (int k = 0; k < 3; ++k)
+                Assert.True(Tolerance.Near(expected[k], actual[k], 1e-4f));
+        }
+    }
+
+    [Fact]
+    public void Convert_ReframedTilt_AddsItToTheSceneScript()
+    {
+        // Arrange
+        ExportSource source = SmallSource() with { Framing = Framing.Neutral with { Tilt = 3.0f }, Reframe = Reframe.None with { Tilt = 2.0f } };
+
+        // Act
+        ExportResult result = StageExporter.Convert(source);
+        ExportFile scene = result.Scripts.First(file => file.Name == "base.evb");
+
+        // Assert
+        Assert.Equal(5, result.Tilt);
+        Assert.Equal(5.0f, EvbPlayer.Tilt(scene.Data));
+    }
+
+    [Fact]
+    public void Convert_NoTilt_ReportsAFlatScene()
+    {
+        // Arrange
+        ExportSource source = SmallSource();
+
+        // Act
+        ExportResult result = StageExporter.Convert(source);
+
+        // Assert
+        Assert.Equal(0, result.Tilt);
     }
 
     [Fact]

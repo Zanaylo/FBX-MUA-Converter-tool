@@ -1,5 +1,6 @@
 using FbxToMua.App.Services;
 using FbxToMua.Core.Install;
+using FbxToMua.Core.Workflows;
 
 namespace FbxToMua.App.ViewModels;
 
@@ -11,7 +12,9 @@ public sealed class MainViewModel
         FolderPicker picker = new();
         StageInstaller installer = new(new InstallRecords(InstallRecords.DefaultRoot), steam);
 
-        Export = new ExportViewModel(installer, steam, picker, Log);
+        ReframeRecords reframes = new(InstallRecords.DefaultRoot);
+
+        Export = new ExportViewModel(installer, steam, picker, new StageViewer(), reframes, Log);
         Import = new ImportViewModel(steam, picker, Log);
     }
 

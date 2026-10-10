@@ -47,6 +47,20 @@ public sealed class StageWorkflowsUnitTest : IDisposable
     }
 
     [Fact]
+    public void Export_Reframed_ReachesTheExport()
+    {
+        // Arrange
+        string folder = StageFolderNamed("bg113");
+        Reframe reframe = Reframe.None with { Tilt = 7.0f };
+
+        // Act
+        ExportedStage exported = StageWorkflows.Export(folder, null, null, reframe);
+
+        // Assert
+        Assert.Equal(7, exported.Result.Tilt);
+    }
+
+    [Fact]
     public void Export_StageFolderWithAName_UsesTheName()
     {
         // Arrange

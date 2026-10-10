@@ -32,6 +32,13 @@ them back. **Export files only...** just writes the files into a folder without 
 (you get the loose `.MUA` to open in Blender, and the `BBTAG\` and `BBCF\` folders with the `.pac`
 files).
 
+**Viewer...** opens the stage the way BBTAG and BBCF's fight camera sees it, with two stand-in fighters.
+When a stage comes out with the wrong angle, move the camera and the fighters around it (side, height,
+distance, turn, tilt, stage scale) and press **Keep this framing**. The framing is saved per stage and
+used by every **Install in game** and **Export files only...** after that; **Reset framing** goes back
+to the converted one. The fighters' positions are only for looking: the camera follows the middle of
+the two, the way it does in a fight, and **Free look** lets you orbit around the stage.
+
 On the Steam release of BBTAG the files are encrypted under `asset\`, and FbxToMua writes them
 encrypted the same way. The executable needs no patch.
 
@@ -73,7 +80,7 @@ FbxToMua import "D:\Steam\steamapps\common\BBTAG" bg_snowtown --uni2 "D:\Steam\s
 open in Blender.
 
 Where it keeps its data: `%LOCALAPPDATA%\FbxToMua\` (`installs.json` with what was installed where,
-and the `Backup\` folder with the originals).
+`reframes.json` with the framing kept in the viewer, and the `Backup\` folder with the originals).
 
 ---
 

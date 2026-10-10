@@ -8,14 +8,16 @@ public sealed record ExportedStage(ExportResult Result, string Name);
 
 public static class StageWorkflows
 {
-    public static ExportedStage Export(string folder, string? stage, string? name = null)
+    public static ExportedStage Export(string folder, string? stage, string? name = null, Reframe? reframe = null)
     {
         if (StageFolder.Holds(folder))
         {
             string leaf = Path.GetFileName(Path.TrimEndingDirectorySeparator(folder));
             string title = name ?? leaf;
 
-            return new ExportedStage(StageExporter.Convert(StageFolder.Load(folder, StageNames.Stem(title))), title);
+            ExportSource loaded = StageFolder.Load(folder, StageNames.Stem(title));
+
+            return new ExportedStage(StageExporter.Convert(loaded with { Reframe = reframe ?? Reframe.None }), title);
         }
 
         using IStageSource source = StageSources.Open(folder) ?? throw new StageConversionException($"no French-Bread stages found in {folder}");
@@ -23,7 +25,9 @@ public static class StageWorkflows
         SourceStage? listed = source.Stages().FirstOrDefault(one => string.Equals(one.Folder, chosen, StringComparison.OrdinalIgnoreCase));
         string named = name ?? (listed is null || listed.Name.Length == 0 ? chosen : TextDisplay.Of(listed.Name));
 
-        return new ExportedStage(StageExporter.Convert(StageSources.ExportSourceOf(source, chosen, StageNames.Stem(named, chosen.ToLowerInvariant()))), named);
+        ExportSource read = StageSources.ExportSourceOf(source, chosen, StageNames.Stem(named, chosen.ToLowerInvariant()));
+
+        return new ExportedStage(StageExporter.Convert(read with { Reframe = reframe ?? Reframe.None }), named);
     }
 
     public static ImStage Import(string folder, string stage, string? name = null)

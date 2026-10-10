@@ -32,6 +32,7 @@
                             <ComboBox ItemsSource="{Binding Sources}" SelectedItem="{Binding Source}" />
                         </DockPanel>
                         <TextBlock DockPanel.Dock="Top" Style="{StaticResource Caption}" Text="2. Stage" />
+                        <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}" Text="{Binding FramingNote}" />
                         <TextBox DockPanel.Dock="Bottom" Text="{Binding StageName, UpdateSourceTrigger=PropertyChanged}" />
                         <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Caption}" Text="Name shown in the record" />
                         <ListBox ItemsSource="{Binding Stages}" SelectedItem="{Binding Stage}" DisplayMemberPath="Shown" ItemContainerStyle="{StaticResource Compact}" />
@@ -49,6 +50,7 @@
                             <Button Style="{StaticResource Action}" Content="Install in game" Command="{Binding Install}" />
                             <Button Style="{StaticResource Action}" Content="Restore original" Command="{Binding Restore}" />
                             <Button Style="{StaticResource Action}" Content="Export files only..." Command="{Binding ExportFiles}" />
+                            <Button Style="{StaticResource Action}" Content="Viewer..." Command="{Binding View}" />
                         </StackPanel>
                         <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}"
                                    Text="The first install over a stage backs it up; Restore puts the original back byte for byte. Retail BBTAG (asset folder) is written encrypted, the way the game reads it." />

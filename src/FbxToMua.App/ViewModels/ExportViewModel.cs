@@ -3,6 +3,7 @@ using System.Windows.Input;
 using FbxToMua.App.Services;
 using FbxToMua.Core.Export;
 using FbxToMua.Core.Install;
+using FbxToMua.Core.Preview;
 using FbxToMua.Core.Sources;
 using FbxToMua.Core.Workflows;
 
@@ -12,6 +13,8 @@ public sealed class ExportViewModel : ObservableObject
 {
     private readonly StageInstaller _installer;
     private readonly IFolderPicker _picker;
+    private readonly IStageViewer _viewer;
+    private readonly IReframeRecords _reframes;
     private readonly StatusLog _log;
     private GameChoice? _source;
     private StageChoice? _stage;
@@ -19,11 +22,14 @@ public sealed class ExportViewModel : ObservableObject
     private string _targetFolder = string.Empty;
     private TargetChoice? _replace;
     private string _name = string.Empty;
+    private string _framingNote = string.Empty;
 
-    public ExportViewModel(StageInstaller installer, ISteamLibrary steam, IFolderPicker picker, StatusLog log)
+    public ExportViewModel(StageInstaller installer, ISteamLibrary steam, IFolderPicker picker, IStageViewer viewer, IReframeRecords reframes, StatusLog log)
     {
         _installer = installer;
         _picker = picker;
+        _viewer = viewer;
+        _reframes = reframes;
         _log = log;
 
         foreach (GameChoice game in GameChoice.Detected(KnownInstalls.FrenchBread, steam))
@@ -32,6 +38,7 @@ public sealed class ExportViewModel : ObservableObject
         BrowseSource = new AsyncCommand(BrowseSourceAsync);
         BrowseTarget = new AsyncCommand(BrowseTargetAsync);
         ExportFiles = new AsyncCommand(ExportFilesAsync, () => Ready);
+        View = new AsyncCommand(ViewAsync, () => Ready);
         Install = new AsyncCommand(InstallAsync, () => Ready && Replace is not null);
         Restore = new AsyncCommand(RestoreAsync, () => Replace is not null);
 
@@ -47,6 +54,7 @@ public sealed class ExportViewModel : ObservableObject
     public ICommand BrowseSource { get; }
     public ICommand BrowseTarget { get; }
     public ICommand ExportFiles { get; }
+    public ICommand View { get; }
     public ICommand Install { get; }
     public ICommand Restore { get; }
 
@@ -65,9 +73,18 @@ public sealed class ExportViewModel : ObservableObject
         get => _stage;
         set
         {
-            if (SetProperty(ref _stage, value))
-                StageName = value?.Name.Length > 0 ? value.Name : value?.Folder ?? string.Empty;
+            if (!SetProperty(ref _stage, value))
+                return;
+
+            StageName = value?.Name.Length > 0 ? value.Name : value?.Folder ?? string.Empty;
+            RefreshFraming();
         }
+    }
+
+    public string FramingNote
+    {
+        get => _framingNote;
+        private set => SetProperty(ref _framingNote, value);
     }
 
     public string StageName
@@ -104,6 +121,7 @@ public sealed class ExportViewModel : ObservableObject
     {
         Stages.Clear();
         Stage = null;
+        RefreshFraming();
 
         if (Source is null)
             return;
@@ -168,13 +186,39 @@ public sealed class ExportViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
-    private Task<ExportedStage> Exported()
+    private Reframe ChosenReframe() => Source is null ? Reframe.None : _reframes.Of(Source.Folder, Stage?.Folder);
+
+    private void RefreshFraming() => FramingNote = ReframeNote.Of(ChosenReframe());
+
+    private Task<ExportedStage> Exported(Reframe reframe)
     {
         string folder = Source!.Folder;
         string? stage = Stage?.Folder;
         string name = StageName;
 
-        return Task.Run(() => StageWorkflows.Export(folder, stage, name));
+        return Task.Run(() => StageWorkflows.Export(folder, stage, name, reframe));
+    }
+
+    private async Task ViewAsync()
+    {
+        string folder = Source!.Folder;
+        string? stage = Stage?.Folder;
+        string name = StageName;
+
+        await _log.Guarded(async () =>
+        {
+            _log.Write($"Opening {name} in the viewer...");
+            ExportedStage exported = await Exported(Reframe.None);
+            StagePreview preview = await Task.Run(() => StagePreview.Of(exported.Result));
+            Reframe? kept = await _viewer.Adjust(name, preview, _reframes.Of(folder, stage));
+
+            if (kept is null)
+                return;
+
+            _reframes.Keep(folder, stage, kept.Value);
+            RefreshFraming();
+            _log.Write($"{name}: {FramingNote}. Install or export again to put it in the game.");
+        });
     }
 
     private async Task ExportFilesAsync()
@@ -187,7 +231,7 @@ public sealed class ExportViewModel : ObservableObject
         await _log.Guarded(async () =>
         {
             _log.Write($"Exporting {StageName}...");
-            ExportedStage exported = await Exported();
+            ExportedStage exported = await Exported(ChosenReframe());
             string folder = Path.Combine(output, exported.Result.Stage);
             await Task.Run(() => ExportFolder.Write(exported.Result, folder));
             _log.Write(ExportSummary.Of(exported.Result) + $" Written to {folder}.");
@@ -201,7 +245,7 @@ public sealed class ExportViewModel : ObservableObject
         await _log.Guarded(async () =>
         {
             _log.Write($"Exporting {StageName} over {replace.Target.Stem}...");
-            ExportedStage exported = await Exported();
+            ExportedStage exported = await Exported(ChosenReframe());
             InstallReport report = await Task.Run(() => _installer.Install(Target, replace.Target, exported.Result, exported.Name));
             _log.Write(ExportSummary.Of(exported.Result) + " " + report.Message);
             RefreshTargets();

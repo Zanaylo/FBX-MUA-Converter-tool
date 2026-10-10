@@ -30,11 +30,12 @@ public struct Framing
 
 public sealed record ExportFile(string Name, byte[] Data);
 
-public sealed class ExportSource
+public sealed record ExportSource
 {
     public byte[] Model { get; init; } = [];
     public Func<string, byte[]?> Image { get; init; } = _ => null;
     public Framing Framing { get; init; } = Framing.Neutral;
+    public Reframe Reframe { get; init; } = Reframe.None;
     public string Stage { get; init; } = string.Empty;
     public byte[] Objects { get; init; } = [];
     public byte[] Sheet { get; init; } = [];
@@ -60,6 +61,7 @@ public sealed class ExportResult
     public int Sprites { get; set; }
     public int Front { get; set; }
     public int Pulled { get; set; }
+    public int Tilt { get; set; }
     public bool Turned { get; set; }
 }
 

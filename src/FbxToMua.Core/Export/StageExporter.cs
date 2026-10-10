@@ -71,7 +71,7 @@ public sealed class StageExporter
         _fbx = fbx;
         _scene = new FbxExHierarchy(fbx);
         _result = result;
-        _place = source.Framing.Placement();
+        _place = source.Reframe.IsNone ? source.Framing.Placement() : MatrixMath.Multiply(source.Framing.Placement(), source.Reframe.StageMatrix());
     }
 
     public static ExportResult Convert(ExportSource source)
@@ -117,7 +117,8 @@ public sealed class StageExporter
             new(EvbCode.SceneHeight, SceneHeight),
         ];
 
-        int tilt = Std.RoundHalfAway(_source.Framing.Tilt);
+        int tilt = _source.Reframe.SceneTilt(_source.Framing.Tilt);
+        _result.Tilt = tilt;
 
         if (tilt != 0)
             records.Add(new EvbRecord(EvbCode.SceneTilt, tilt, 0, 0));
@@ -580,9 +581,11 @@ public sealed class StageExporter
         string name = $"layer_{group.Entry:D3}_{group.Blend}_{first / ObjectLayer.MostSprites}";
         List<Limb> limbs = [];
 
+        Pose framePose = FramePose(group);
+
         if (group.Moves)
         {
-            limbs.Add(new Limb(name + FrameSuffix, 0, group.Frame, [group.Frame]));
+            limbs.Add(new Limb(name + FrameSuffix, 0, framePose, [framePose]));
 
             for (int k = first; k < last; ++k)
                 limbs.Add(new Limb($"{name}_{k - first}", 1, group.Sprites[k].Rest, group.Sprites[k].Poses));
@@ -590,7 +593,7 @@ public sealed class StageExporter
 
         MuaBlend blend = LayerBlend(group.Blend);
         int skeleton = group.Moves ? AddRig(name, limbs, blend, MuaFlags.Animated | LayerFlags) : AddStill(name, blend, MuaFlags.Static | LayerFlags);
-        Matrix frame = PoseMath.Compose(group.Frame);
+        Matrix frame = PoseMath.Compose(framePose);
         List<MuaVertex> vertices = [];
         List<(int Material, List<int> Indices)> parts = [];
 
@@ -611,6 +614,14 @@ public sealed class StageExporter
 
         if (group.Moves)
             AddTake(name, limbs, group.Span, [mesh]);
+    }
+
+    private Pose FramePose(LayerGroup group)
+    {
+        if (_source.Reframe.IsNone)
+            return group.Frame;
+
+        return PoseMath.Split(MatrixMath.Multiply(PoseMath.Compose(group.Frame), _source.Reframe.StageMatrix()));
     }
 
     private static List<int> PartFor(List<(int Material, List<int> Indices)> parts, int material)

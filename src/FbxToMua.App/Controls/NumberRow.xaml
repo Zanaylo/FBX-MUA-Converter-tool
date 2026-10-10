@@ -1,0 +1,15 @@
+<UserControl x:Class="FbxToMua.App.Controls.NumberRow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+    <DockPanel Margin="0,3">
+        <TextBlock DockPanel.Dock="Left" Width="96" VerticalAlignment="Center" Text="{Binding Label, ElementName=Root}" />
+        <TextBox DockPanel.Dock="Right" Width="64" Margin="8,0,0,0" VerticalAlignment="Center" HorizontalContentAlignment="Right"
+                 Text="{Binding Value, ElementName=Root, StringFormat=0.##, UpdateSourceTrigger=LostFocus}" />
+        <Slider VerticalAlignment="Center" IsSnapToTickEnabled="True"
+                Minimum="{Binding Minimum, ElementName=Root}" Maximum="{Binding Maximum, ElementName=Root}"
+                TickFrequency="{Binding Step, ElementName=Root}" SmallChange="{Binding Step, ElementName=Root}"
+                LargeChange="{Binding LargeStep, ElementName=Root}"
+                Value="{Binding Value, ElementName=Root}" />
+    </DockPanel>
+</UserControl>

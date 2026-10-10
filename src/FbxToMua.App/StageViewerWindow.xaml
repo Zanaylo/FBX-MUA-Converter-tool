@@ -1,0 +1,66 @@
+<Window x:Class="FbxToMua.App.StageViewerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:FbxToMua.App.Controls"
+        Title="{Binding Title, StringFormat=Stage viewer - {0}}"
+        Width="1420" Height="820" MinWidth="1000" MinHeight="600"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="12" />
+            <ColumnDefinition Width="330" />
+        </Grid.ColumnDefinitions>
+
+        <DockPanel Grid.Column="0">
+            <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}"
+                       Text="The view is BBTAG and BBCF's fight camera: eye 320 back and 100 up, 45 degree FOV, 16:9, far plane 100000. Textures are drawn without the vertex colours and the game's lighting, and the tilt preview is an approximation." />
+            <Border Background="Black">
+                <Viewbox Stretch="Uniform">
+                    <Grid x:Name="Screen" Width="1280" Height="720" Background="Black" ClipToBounds="True"
+                          MouseLeftButtonDown="OnScreenPressed" MouseLeftButtonUp="OnScreenReleased" MouseMove="OnScreenMoved" MouseWheel="OnScreenWheel">
+                        <Viewport3D x:Name="View" IsHitTestVisible="False">
+                            <Viewport3D.Camera>
+                                <PerspectiveCamera x:Name="Lens" />
+                            </Viewport3D.Camera>
+                        </Viewport3D>
+                    </Grid>
+                </Viewbox>
+            </Border>
+        </DockPanel>
+
+        <DockPanel Grid.Column="2">
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                <Button Style="{StaticResource Action}" Content="Keep this framing" IsDefault="True" Click="OnKeep" />
+                <Button Style="{StaticResource Action}" Margin="0" Content="Cancel" IsCancel="True" />
+            </StackPanel>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Caption}" Margin="0,0,0,4" Text="Fight camera and fighters" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="The game moves them together, so these move the stage around them instead. Install and Export use what you keep here." />
+                    <controls:NumberRow Label="Side" Minimum="-1500" Maximum="1500" Step="1" Value="{Binding Side}" />
+                    <controls:NumberRow Label="Height" Minimum="-500" Maximum="500" Step="1" Value="{Binding Height}" />
+                    <controls:NumberRow Label="Distance" Minimum="-300" Maximum="2000" Step="1" Value="{Binding Distance}" />
+                    <controls:NumberRow Label="Turn" Minimum="-180" Maximum="180" Step="0.5" Value="{Binding Turn}" />
+                    <controls:NumberRow Label="Tilt" Minimum="-30" Maximum="30" Step="1" Value="{Binding Tilt}" />
+                    <controls:NumberRow Label="Stage scale" Minimum="0.25" Maximum="4" Step="0.01" Value="{Binding Scale}" />
+                    <TextBlock Style="{StaticResource Hint}" Text="{Binding SceneTilt, StringFormat=Tilt written to base.evb: {0} degrees (whole degrees only)}" />
+                    <Button HorizontalAlignment="Left" Margin="0,8,0,0" Padding="10,4" Content="Reset framing" Command="{Binding ResetFraming}" />
+
+                    <TextBlock Style="{StaticResource Caption}" Text="Fighters (preview only)" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Stand-ins 150 units tall. The camera follows the middle of the two, the way the fight camera does." />
+                    <controls:NumberRow Label="P1 position" Minimum="-2500" Maximum="2500" Step="1" Value="{Binding FighterOne}" />
+                    <controls:NumberRow Label="P2 position" Minimum="-2500" Maximum="2500" Step="1" Value="{Binding FighterTwo}" />
+                    <Button HorizontalAlignment="Left" Margin="0,8,0,0" Padding="10,4" Content="Reset fighters" Command="{Binding ResetFighters}" />
+
+                    <TextBlock Style="{StaticResource Caption}" Text="View" />
+                    <CheckBox Margin="0,4" Content="Free look (drag to orbit, wheel to zoom)" IsChecked="{Binding FreeLook}" />
+                    <CheckBox Margin="0,4" Content="Show the fight line (ground under the fighters)" IsChecked="{Binding ShowFightLine}" />
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
+    </Grid>
+</Window>
