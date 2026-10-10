@@ -1791,12 +1791,13 @@ def stage_material(model, slot, index, blend, prefix, style, flip):
     material = bpy.data.materials.new(unique_name)
     material.use_nodes = True
     tree = material.node_tree
+    tree.nodes.clear()
 
     for node in list(tree.nodes):
         if node.type != "OUTPUT_MATERIAL":
             tree.nodes.remove(node)
 
-    output = tree.nodes["Material Output"]
+    output = tree.nodes.new('ShaderNodeOutputMaterial')
     texture = tree.nodes.new("ShaderNodeTexImage")
     texture.extension = "REPEAT"
 
