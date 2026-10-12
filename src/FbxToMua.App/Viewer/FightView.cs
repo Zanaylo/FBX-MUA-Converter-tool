@@ -16,6 +16,7 @@ public sealed class FightView
     private const double FarthestOrbit = 50000.0;
     private static readonly double HorizontalFov = 2.0 * Math.Atan(Math.Tan(Radians(BattleCamera.Fov) * 0.5) * BattleCamera.Aspect) * 180.0 / Math.PI;
     private static readonly Vector3D Up = new(0.0, 1.0, 0.0);
+    private static readonly Vector3D Ahead = new(0.0, 0.0, 1.0);
 
     private double _yaw;
     private double _pitch;
@@ -39,12 +40,11 @@ public sealed class FightView
         _distance = Math.Clamp(_distance * Math.Pow(ZoomPerNotch, wheel / WheelNotch), ClosestOrbit, FarthestOrbit);
     }
 
-    public static void Game(PerspectiveCamera camera, double cameraX, int tiltDegrees)
+    public static void Game(PerspectiveCamera camera, double cameraX)
     {
-        double tilt = Radians(tiltDegrees);
         camera.Position = new Point3D(-cameraX, BattleCamera.EyeHeight, -BattleCamera.EyeDistance);
-        camera.LookDirection = new Vector3D(0.0, -Math.Sin(tilt), Math.Cos(tilt));
-        camera.UpDirection = new Vector3D(0.0, Math.Cos(tilt), Math.Sin(tilt));
+        camera.LookDirection = Ahead;
+        camera.UpDirection = Up;
         Lens(camera, BattleCamera.FarPlane);
     }
 

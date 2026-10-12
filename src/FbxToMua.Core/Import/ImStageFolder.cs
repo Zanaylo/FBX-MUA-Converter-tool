@@ -1,9 +1,10 @@
 using System.Text;
+using FbxToMua.Core.Export;
 using FbxToMua.Core.Sources;
 
 namespace FbxToMua.Core.Import;
 
-public sealed record ImStage(string Name, string Title, string From, string Source, GameKind Game, ArcStageResult Result);
+public sealed record ImStage(string Name, string Title, string From, string Source, GameKind Game, ArcStageResult Result, StageLook Look);
 
 public static class ImStageFolder
 {
@@ -24,7 +25,7 @@ public static class ImStageFolder
 
     public static string NoteOf(ImStage stage)
     {
-        string block = ImStageBlock.For(stage.Source, stage.Game, stage.Result.Tilt, stage.Title);
+        string block = ImStageBlock.For(stage.Source, stage.Game, stage.Result.Tilt, stage.Title, stage.Look);
 
         return ImStageNote.Build(SafeName(stage.Name), stage.From, stage.Source, stage.Result, block);
     }

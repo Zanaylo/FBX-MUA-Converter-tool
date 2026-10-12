@@ -4,6 +4,7 @@ namespace FbxToMua.Core.Formats.Mua;
 
 public enum MuaBlend : uint
 {
+    Opaque = 0,
     Add = 2,
     Subtract = 4,
     Unset = 0x7fffffff,
@@ -14,6 +15,7 @@ public static class MuaFlags
     public const uint Scene = 0x10000100;
     public const uint Static = 0x20000100;
     public const uint Animated = 0x10000140;
+    public const uint NoShadow = 0x100;
     public const uint BothFaces = 0x400;
     public const uint NoDepthTest = 0x1000;
     public const uint NoDepthWrite = 0x2000;
@@ -46,6 +48,30 @@ public struct MuaVertex
     public static MuaVertex Unrigged()
     {
         return new MuaVertex { BoneIndex = Float3.All(-1.0f), Weight = Float3.All(-1.0f) };
+    }
+
+    public static MuaVertex Between(MuaVertex from, MuaVertex to, float share)
+    {
+        MuaVertex between = from;
+        between.Position = Float3.Lerp(from.Position, to.Position, share);
+        between.Normal = Float3.Lerp(from.Normal, to.Normal, share);
+        between.Tangent = Float3.Lerp(from.Tangent, to.Tangent, share);
+        between.U = from.U + (to.U - from.U) * share;
+        between.V = from.V + (to.V - from.V) * share;
+        between.Colour = new MuaColour(Channel(from.Colour.R, to.Colour.R, share), Channel(from.Colour.G, to.Colour.G, share),
+            Channel(from.Colour.B, to.Colour.B, share), Channel(from.Colour.A, to.Colour.A, share));
+
+        if (!Float3.TryNormalise(ref between.Normal))
+            between.Normal = from.Normal;
+
+        Float3.TryNormalise(ref between.Tangent);
+
+        return between;
+    }
+
+    private static byte Channel(byte from, byte to, float share)
+    {
+        return (byte)Math.Clamp(MathF.Round(from + (to - from) * share, MidpointRounding.AwayFromZero), byte.MinValue, byte.MaxValue);
     }
 
     public readonly MuaVertex RiggedTo(int bone)

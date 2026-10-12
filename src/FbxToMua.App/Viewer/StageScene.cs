@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
+using FbxToMua.Core.Export;
 using FbxToMua.Core.Imaging;
 using FbxToMua.Core.Preview;
 
@@ -13,8 +14,10 @@ public static class StageScene
     private static readonly Rect WholeTexture = new(0.0, 0.0, 1.0, 1.0);
     private static readonly Color Untextured = Color.FromRgb(0x80, 0x80, 0x80);
 
-    public static Model3DGroup Build(StagePreview preview)
+    public static Model3DGroup Build(StagePreview preview, StageLook look)
     {
+        Dictionary<string, BgraImage> images = preview.Images.AsParallel()
+            .ToDictionary(pair => pair.Key, pair => look.Applied(pair.Value, preview.Depths.GetValueOrDefault(pair.Key, StageDepth.Near)), StringComparer.OrdinalIgnoreCase);
         Dictionary<string, Brush> brushes = new(StringComparer.OrdinalIgnoreCase);
         Model3DGroup scene = new();
 
@@ -25,7 +28,7 @@ public static class StageScene
                 if (part.Triangles.Length == 0)
                     continue;
 
-                Brush brush = BrushFor(part.Texture, preview, brushes);
+                Brush brush = BrushFor(part.Texture, images, brushes);
                 scene.Children.Add(Part(mesh, part, MaterialFor(brush, mesh.Blend)));
             }
         }
@@ -82,12 +85,12 @@ public static class StageScene
         return material;
     }
 
-    private static Brush BrushFor(string texture, StagePreview preview, Dictionary<string, Brush> brushes)
+    private static Brush BrushFor(string texture, Dictionary<string, BgraImage> images, Dictionary<string, Brush> brushes)
     {
         if (brushes.TryGetValue(texture, out Brush? known))
             return known;
 
-        Brush brush = preview.Images.TryGetValue(texture, out BgraImage? image) ? ImageBrushOf(image) : new SolidColorBrush(Untextured);
+        Brush brush = images.TryGetValue(texture, out BgraImage? image) ? ImageBrushOf(image) : new SolidColorBrush(Untextured);
         brush.Freeze();
         brushes[texture] = brush;
 
@@ -99,11 +102,14 @@ public static class StageScene
         BitmapSource bitmap = BitmapSource.Create(image.Width, image.Height, Dpi, Dpi, PixelFormats.Bgra32, null, image.Pixels, image.Width * BgraImage.Channels);
         bitmap.Freeze();
 
-        return new ImageBrush(bitmap)
+        ImageBrush brush = new(bitmap)
         {
             ViewportUnits = BrushMappingMode.Absolute,
             Viewport = WholeTexture,
             TileMode = TileMode.Tile,
         };
+        RenderOptions.SetCachingHint(brush, CachingHint.Cache);
+
+        return brush;
     }
 }

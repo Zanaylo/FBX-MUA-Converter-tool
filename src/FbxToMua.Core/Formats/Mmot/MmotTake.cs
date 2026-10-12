@@ -29,10 +29,26 @@ public sealed class MmotBone
 
     public void Hold(Pose pose, int frame)
     {
-        Track[(int)MmotKind.Translation].Add(new MmotKey(Widened(pose.Translation), frame));
-        Track[(int)MmotKind.Rotation].Add(new MmotKey(Widened(pose.Rotation), frame));
-        Track[(int)MmotKind.Turn].Add(new MmotKey(pose.Turn, frame));
-        Track[(int)MmotKind.Scale].Add(new MmotKey(Widened(pose.Scale), frame));
+        Hold(pose, frame, PoseChannel.Move);
+        Hold(pose, frame, PoseChannel.Turn);
+        Hold(pose, frame, PoseChannel.Size);
+    }
+
+    public void Hold(Pose pose, int frame, PoseChannel channel)
+    {
+        switch (channel)
+        {
+            case PoseChannel.Move:
+                Track[(int)MmotKind.Translation].Add(new MmotKey(Widened(pose.Translation), frame));
+                return;
+            case PoseChannel.Size:
+                Track[(int)MmotKind.Scale].Add(new MmotKey(Widened(pose.Scale), frame));
+                return;
+            default:
+                Track[(int)MmotKind.Rotation].Add(new MmotKey(Widened(pose.Rotation), frame));
+                Track[(int)MmotKind.Turn].Add(new MmotKey(pose.Turn, frame));
+                return;
+        }
     }
 
     private static Float4 Widened(Float3 value) => new(value[0], value[1], value[2], 0.0f);

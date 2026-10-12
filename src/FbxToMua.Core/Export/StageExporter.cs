@@ -6,6 +6,7 @@ using FbxToMua.Core.Formats.Mua;
 using FbxToMua.Core.Formats.Objects;
 using FbxToMua.Core.Formats.Pat;
 using FbxToMua.Core.Geometry;
+using FbxToMua.Core.Imaging;
 
 namespace FbxToMua.Core.Export;
 
@@ -20,6 +21,7 @@ public sealed class StageExporter
     private const string FallbackTexture = "white.dds";
     private const string FarSuffix = "_far";
     private const string FrameSuffix = "_frame";
+    private const string ShadowSuffix = "_shadow";
     private const int Additive = 1;
     private const int None = -1;
     private const float Tiny = 1e-12f;
@@ -31,10 +33,9 @@ public sealed class StageExporter
     private const uint LayerFlags = MuaFlags.NoDepthTest | MuaFlags.NoDepthWrite | MuaFlags.BothFaces;
 
     private static readonly int[] QuadTriangles = [0, 1, 2, 0, 2, 3];
+    private static readonly PoseChannel[] Channels = Enum.GetValues<PoseChannel>();
     private static readonly int[] SceneSwitches = [0, 1, 0, 0];
-    private static readonly int[] SceneVector = [0, 900, -1000];
     private static readonly int[] ScenePair = [0, 8000];
-    private static readonly int[] SceneHeight = [750];
 
     private sealed class Chunk
     {
@@ -42,8 +43,6 @@ public sealed class StageExporter
         public int[] Map { get; init; } = [];
         public List<(int Material, List<int> Indices)> Parts { get; } = [];
     }
-
-    private sealed record Limb(string Name, int Parent, Pose Rest, List<Pose> Poses);
 
     private sealed class NodePlan
     {
@@ -62,8 +61,15 @@ public sealed class StageExporter
     private readonly ExportResult _result;
     private readonly MuaModel _model = new();
     private readonly List<DrawKey> _keys = [];
+    private readonly List<MeshDraft> _drafts = [];
+    private readonly RigBook _rigs = new();
     private readonly Dictionary<string, byte[]> _supplied = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, byte[]> _found = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _located = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, bool> _solid = new(StringComparer.OrdinalIgnoreCase);
     private readonly Matrix _place;
+    private readonly int[] _light;
+    private double _unwrittenFront = double.MaxValue;
 
     private StageExporter(ExportSource source, FbxExModel fbx, ExportResult result)
     {
@@ -72,7 +78,10 @@ public sealed class StageExporter
         _scene = new FbxExHierarchy(fbx);
         _result = result;
         _place = source.Reframe.IsNone ? source.Framing.Placement() : MatrixMath.Multiply(source.Framing.Placement(), source.Reframe.StageMatrix());
+        _light = SceneLight.Vector(source.Reframe);
     }
+
+    private StageLook Look => _source.Reframe.Look ?? _source.Framing.Look;
 
     public static ExportResult Convert(ExportSource source)
     {
@@ -112,9 +121,9 @@ public sealed class StageExporter
         [
             new(EvbCode.SceneOpen),
             new(EvbCode.SceneSwitches, SceneSwitches),
-            new(EvbCode.SceneVector, SceneVector),
+            new(EvbCode.SceneVector, _light),
             new(EvbCode.ScenePair, ScenePair),
-            new(EvbCode.SceneHeight, SceneHeight),
+            new(EvbCode.SceneHeight, SceneLight.Strength(_source.Reframe)),
         ];
 
         int tilt = _source.Reframe.SceneTilt(_source.Framing.Tilt);
@@ -145,7 +154,33 @@ public sealed class StageExporter
         bool known = fbxTexture >= 0 && fbxTexture < _fbx.Textures.Count;
         string leaf = known ? LeafOf(_fbx.Textures[fbxTexture]) : string.Empty;
 
-        return TextureNamed(leaf.Length == 0 ? FallbackTexture : leaf);
+        return TextureNamed(leaf.Length == 0 ? FallbackTexture : Located(leaf));
+    }
+
+    private string Located(string leaf)
+    {
+        if (_located.TryGetValue(leaf, out string? known))
+            return known;
+
+        string located = TextureFile.Candidates(leaf).FirstOrDefault(Readable) ?? Path.ChangeExtension(leaf, TextureFile.Extension);
+        _located[leaf] = located;
+
+        return located;
+    }
+
+    private bool Readable(string name)
+    {
+        if (_found.ContainsKey(name))
+            return true;
+
+        byte[]? data = _source.Image(name);
+
+        if (data is null || data.Length == 0)
+            return false;
+
+        _found[name] = data;
+
+        return true;
     }
 
     private int MaterialOf(int fbxMaterial)
@@ -177,19 +212,6 @@ public sealed class StageExporter
             moved[c] = (float)(placed[0] * place[c] + placed[1] * place[4 + c] + placed[2] * place[8 + c] + place[12 + c]);
 
         return moved;
-    }
-
-    private static bool TryNormalise(ref Float3 vector)
-    {
-        float length = MathF.Sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]);
-
-        if (length < Tiny)
-            return false;
-
-        for (int k = 0; k < 3; ++k)
-            vector[k] /= length;
-
-        return true;
     }
 
     private static byte Byte(float value)
@@ -244,13 +266,13 @@ public sealed class StageExporter
             for (int k = 0; k < 3; ++k)
                 tangent[k] -= vertex.Normal[k] * along;
 
-            if (!TryNormalise(ref tangent))
+            if (!Float3.TryNormalise(ref tangent))
             {
                 Float3 side = new(vertex.Normal[1], -vertex.Normal[0], 0.0f);
                 Float3 up = new(0.0f, vertex.Normal[2], -vertex.Normal[1]);
                 tangent = MathF.Abs(vertex.Normal[2]) < 0.9f ? side : up;
 
-                if (!TryNormalise(ref tangent))
+                if (!Float3.TryNormalise(ref tangent))
                     tangent[0] = 1.0f;
             }
 
@@ -265,7 +287,7 @@ public sealed class StageExporter
         vertex.Position = Transform(Slice3(source, at + FbxExNode.PositionAt), world, _place);
         Float3 normal = MatrixMath.Rotate(Slice3(source, at + FbxExNode.NormalAt), normals);
 
-        if (!TryNormalise(ref normal))
+        if (!Float3.TryNormalise(ref normal))
             normal[1] = 1.0f;
 
         vertex.Normal = normal;
@@ -475,9 +497,13 @@ public sealed class StageExporter
         }
 
         List<FarPull> pulls = FarField.Decide(spans);
+        _unwrittenFront = GameBloomShield.UnwrittenFront(spans, pulls);
+        MeasureDepths(plans);
 
         for (int i = 0; i < plans.Count; ++i)
-            AddNode(plans[i], pulls[i]);
+            AddNode(plans[i], pulls[i], spans[i]);
+
+        AddDrafts();
     }
 
     private static List<Limb> LimbsOf(string name, Rig rig, FarPull pull)
@@ -487,52 +513,204 @@ public sealed class StageExporter
         if (pull.Pulled)
         {
             Pose pose = PoseMath.Split(FarField.Pull(pull.Factor));
-            limbs.Add(new Limb(name + FarSuffix, 0, pose, [pose]));
+            limbs.Add(new Limb(name + FarSuffix, 0, pose, [pose], new LimbOrigin(LimbOrigin.NoNode, pull.Factor)));
         }
 
         for (int k = 0; k < rig.Joints.Count; ++k)
-            limbs.Add(new Limb(JointName(name, rig, k), limbs.Count, rig.Joints[k].Poses[0], rig.Joints[k].Poses));
+        {
+            RigJoint joint = rig.Joints[k];
+            limbs.Add(new Limb(JointName(name, rig, k), limbs.Count, joint.Poses[0], joint.Poses, new LimbOrigin(joint.Node, 0.0f)));
+        }
 
         return limbs;
     }
 
-    private void AddNode(NodePlan plan, FarPull pull)
+    private DraftOwner OwnerOf(NodePlan plan, string name, FarPull pull, MuaBlend blend, uint depth, out int bone)
+    {
+        bone = None;
+
+        if (plan.Rig is null)
+            return new DraftOwner(blend, MuaFlags.Static | depth, null);
+
+        uint flags = MuaFlags.Animated | depth;
+        RigPlace place = _rigs.Place(new RigKey(plan.Rig.Span, blend, flags), LimbsOf(name, plan.Rig, pull));
+        bone = place.Bone;
+
+        return new DraftOwner(blend, flags, place.Rig);
+    }
+
+    private static bool IsPlain(DraftOwner owner, FarPull pull)
+    {
+        return owner.Rig is null && owner.Blend is (MuaBlend.Unset or MuaBlend.Opaque) && owner.Flags == MuaFlags.Static && !pull.Pulled;
+    }
+
+    private static ShadowChunk[] ShadowChunksOf(List<Chunk> chunks, List<List<MuaVertex>> converted)
+    {
+        return chunks.Select((chunk, c) => new ShadowChunk(converted[c].Select(vertex => vertex.Position).ToArray(), chunk.Parts.Select(part => part.Indices.ToArray()).ToArray())).ToArray();
+    }
+
+    private MuaBlend BlendOf(FbxExNode source, NodePlan plan, FarPull pull, DepthSpan span)
+    {
+        if (source.BlendMode == Additive)
+            return MuaBlend.Add;
+
+        return StaysClearOfGameBloom(source, plan, pull, span) ? MuaBlend.Opaque : MuaBlend.Unset;
+    }
+
+    private bool StaysClearOfGameBloom(FbxExNode source, NodePlan plan, FarPull pull, DepthSpan span)
+    {
+        if (!Look.ClearOfGameBloom)
+            return false;
+
+        if (!GameBloomShield.DrawsFirstSafely(span, pull, _unwrittenFront))
+            return false;
+
+        return HasOpaqueVertices(source) && plan.Chunks.SelectMany(chunk => chunk.Parts).All(part => IsSolid(_model.Textures[_model.Materials[part.Material]]));
+    }
+
+    private static bool HasOpaqueVertices(FbxExNode source)
+    {
+        for (int v = 0; v < source.VertexCount; ++v)
+        {
+            if (Byte(source.Vertices[v * FbxExNode.VertexFloats + FbxExNode.ColourAt + 3]) != byte.MaxValue)
+                return false;
+        }
+
+        return true;
+    }
+
+    private bool IsSolid(string texture)
+    {
+        if (_solid.TryGetValue(texture, out bool known))
+            return known;
+
+        byte[]? data = ImageData(texture);
+        BgraImage? image = data is null ? null : DdsCodec.Decode(data);
+        bool solid = image is not null && GameBloomShield.IsSolid(image);
+        _solid[texture] = solid;
+
+        return solid;
+    }
+
+    private void AddNode(NodePlan plan, FarPull pull, DepthSpan span)
     {
         FbxExNode source = _fbx.Nodes[plan.Node];
         string name = $"node_{plan.Node:D3}";
         Matrix normals = MatrixMath.NormalMatrix(MatrixMath.Multiply(plan.World, _place));
         Matrix pulling = FarField.Pull(pull.Factor);
-        MuaBlend blend = source.BlendMode == Additive ? MuaBlend.Add : MuaBlend.Unset;
+        MuaBlend blend = BlendOf(source, plan, pull, span);
         uint depth = pull.KeepsDepth ? 0 : MuaFlags.NoDepthWrite;
-        List<Limb> limbs = plan.Rig is null ? [] : LimbsOf(name, plan.Rig, pull);
-        int bone = plan.Moving ? limbs.Count : None;
-        int skeleton = plan.Moving ? AddRig(name, limbs, blend, MuaFlags.Animated | depth) : AddStill(name, blend, MuaFlags.Static | depth);
-        DrawKey key = new(pull.Pulled ? TierPulled : TierStage, 0, _keys.Count);
-        List<string> meshNames = [];
+        DraftOwner owner = OwnerOf(plan, name, pull, blend, depth, out int bone);
+        int tier = pull.Pulled ? TierPulled : TierStage;
+        List<List<MuaVertex>> converted = [];
 
-        for (int c = 0; c < plan.Chunks.Count; ++c)
+        foreach (Chunk chunk in plan.Chunks)
         {
-            Chunk chunk = plan.Chunks[c];
             List<MuaVertex> vertices = [];
 
             foreach (int v in chunk.Sources)
             {
                 MuaVertex vertex = Converted(source.Vertices, v * FbxExNode.VertexFloats, plan.World, normals, bone);
                 vertex.Position = MatrixMath.Transform(vertex.Position, pulling);
+
+                if (blend == MuaBlend.Opaque)
+                    vertex.Colour = vertex.Colour with { A = GameBloomShield.HiddenAlpha };
+
                 vertices.Add(vertex);
             }
 
-            meshNames.Add(AddMesh(c == 0 ? name : $"{name}_{c}", skeleton, vertices, chunk.Parts, key));
+            converted.Add(vertices);
         }
 
-        if (plan.Rig is not null)
-            AddTake(name, limbs, plan.Rig.Span, meshNames);
+        ShadowCandidate? candidate = IsPlain(owner, pull) ? new ShadowCandidate(ShadowChunksOf(plan.Chunks, converted)) : null;
+
+        if (candidate is not null)
+            _result.ShadowCandidates.Add(candidate);
+
+        bool floor = candidate is not null && ShadowReceiver.IsFloor(candidate.Chunks);
+
+        for (int c = 0; c < plan.Chunks.Count; ++c)
+        {
+            string chunkName = c == 0 ? name : $"{name}_{c}";
+
+            if (floor)
+                AddShadowed(chunkName, owner, tier, converted[c], plan.Chunks[c].Parts);
+            else
+                AddDraft(chunkName, owner, tier, converted[c], plan.Chunks[c].Parts);
+        }
+
+        if (plan.Moving)
+            ++_result.Animated;
+
+        if (blend == MuaBlend.Opaque)
+            ++_result.ClearOfGameBloom;
 
         if (!pull.Pulled)
             return;
 
         _result.Pulls.Add(new PulledNode(plan.Node, pull.Factor));
         ++_result.Pulled;
+    }
+
+    private void AddShadowed(string name, DraftOwner owner, int tier, List<MuaVertex> vertices, List<(int Material, List<int> Indices)> parts)
+    {
+        List<IReadOnlyList<int>> triangles = parts.Select(part => (IReadOnlyList<int>)part.Indices).ToList();
+        ShadowSplit<MuaVertex> split = ShadowReceiver.Split(vertices, triangles, _light, MuaVertex.MostPerMesh, vertex => vertex.Position, MuaVertex.Between);
+        List<int> materials = parts.Select(part => part.Material).ToList();
+
+        if (split.Lit.IsEmpty)
+        {
+            AddDraft(name, owner, tier, vertices, parts);
+            return;
+        }
+
+        bool cut = !split.Unlit.IsEmpty;
+        AddDraft(cut ? name + ShadowSuffix : name, owner with { Flags = owner.Flags & ~MuaFlags.NoShadow }, tier, split.Lit, materials);
+        ++_result.ShadowFloors;
+
+        if (!cut)
+            return;
+
+        AddDraft(name, owner, tier, split.Unlit, materials);
+        ++_result.ShadowCuts;
+    }
+
+    private void AddDraft(string name, DraftOwner owner, int tier, ShadowPiece<MuaVertex> piece, List<int> materials)
+    {
+        List<(int Material, List<int> Indices)> parts = piece.Parts.Select((indices, k) => (materials[k], indices)).Where(part => part.indices.Count > 0).ToList();
+        AddDraft(name, owner, tier, piece.Vertices, parts);
+    }
+
+    private void AddDraft(string name, DraftOwner owner, int tier, List<MuaVertex> vertices, List<(int Material, List<int> Indices)> parts)
+    {
+        _drafts.Add(new MeshDraft
+        {
+            Name = name,
+            Owner = owner,
+            Tier = tier,
+            Order = _drafts.Count,
+            Vertices = vertices,
+            Parts = parts,
+        });
+    }
+
+    private void AddDrafts()
+    {
+        Dictionary<SharedRig, int> skeletons = _rigs.Rigs.ToDictionary(rig => rig, rig => AddRig(rig.Name, rig.Limbs, rig.Key.Blend, rig.Key.Flags));
+        Dictionary<SharedRig, List<string>> bound = _rigs.Rigs.ToDictionary(rig => rig, _ => new List<string>());
+
+        foreach (MeshDraft draft in DraftMerger.Merge(_drafts))
+        {
+            SharedRig? rig = draft.Owner.Rig;
+            int skeleton = rig is null ? AddStill(draft.Name, draft.Owner.Blend, draft.Owner.Flags) : skeletons[rig];
+            AddMesh(draft.Name, skeleton, draft.Vertices, draft.Parts, new DrawKey(draft.Tier, 0, draft.Order));
+
+            if (rig is not null)
+                bound[rig].Add(draft.Name);
+        }
+
+        foreach (SharedRig rig in _rigs.Rigs)
+            AddTake(rig.Name, rig.Limbs, rig.Key.Span, bound[rig]);
     }
 
     private void AddLayer()
@@ -612,8 +790,11 @@ public sealed class StageExporter
 
         string mesh = AddMesh(name, skeleton, vertices, parts, new DrawKey(TierLayer, group.Prio, _keys.Count));
 
-        if (group.Moves)
-            AddTake(name, limbs, group.Span, [mesh]);
+        if (!group.Moves)
+            return;
+
+        AddTake(name, limbs, group.Span, [mesh]);
+        ++_result.Animated;
     }
 
     private Pose FramePose(LayerGroup group)
@@ -648,7 +829,7 @@ public sealed class StageExporter
             vertex.Position = MatrixMath.Transform(corner.Position, world);
             Float3 normal = MatrixMath.Rotate(new Float3(0.0f, 0.0f, 1.0f), normals);
 
-            if (!TryNormalise(ref normal))
+            if (!Float3.TryNormalise(ref normal))
                 normal[2] = -1.0f;
 
             vertex.Normal = normal;
@@ -661,6 +842,9 @@ public sealed class StageExporter
 
     private void AddTake(string name, List<Limb> limbs, int span, List<string> meshes)
     {
+        if (_source.ForPreview)
+            return;
+
         MmotBone still = MmotBone.Still();
         Pose rest = MuaBone.Root(name).Pose;
         still.Hold(rest, 0);
@@ -686,8 +870,7 @@ public sealed class StageExporter
             }
             else
             {
-                foreach (int frame in KeyReduction.Kept(limb.Poses))
-                    bone.Hold(limb.Poses[frame], frame);
+                HoldKept(bone, limb.Poses);
             }
 
             bones.Add(bone);
@@ -702,7 +885,15 @@ public sealed class StageExporter
         ]);
 
         _result.Scripts.Add(new ExportFile(name + ScriptSuffix, EvbWriter.Build(script)));
-        ++_result.Animated;
+    }
+
+    private static void HoldKept(MmotBone bone, List<Pose> poses)
+    {
+        foreach (PoseChannel channel in Channels)
+        {
+            foreach (int frame in KeyReduction.Kept(poses, channel))
+                bone.Hold(poses[frame], frame, channel);
+        }
     }
 
     private void Order()
@@ -715,16 +906,55 @@ public sealed class StageExporter
             _model.Meshes[ranked[rank]].Pivot[2] = count - rank;
     }
 
+    private void MeasureDepths(List<NodePlan> plans)
+    {
+        Dictionary<int, (double Sum, int Count)> depths = [];
+
+        foreach (NodePlan plan in plans)
+        {
+            FbxExNode source = _fbx.Nodes[plan.Node];
+            double sum = 0.0;
+
+            for (int v = 0; v < source.VertexCount; ++v)
+                sum += StageDepth.Of(_source.Framing, Transform(Slice3(source.Vertices, v * FbxExNode.VertexFloats + FbxExNode.PositionAt), plan.World, Matrix.Identity)[2]);
+
+            foreach (int material in plan.Chunks.SelectMany(chunk => chunk.Parts).Select(part => part.Material).Distinct())
+            {
+                (double total, int count) = depths.GetValueOrDefault(material);
+                depths[material] = (total + sum, count + source.VertexCount);
+            }
+        }
+
+        foreach ((int material, (double total, int count)) in depths)
+            _result.Depths[_model.Textures[_model.Materials[material]]] = (float)(total / Math.Max(1, count));
+    }
+
+    private byte[]? ImageData(string name)
+    {
+        byte[]? data = _supplied.GetValueOrDefault(name) ?? _found.GetValueOrDefault(name) ?? _source.Image(name);
+
+        if (data is null && string.Equals(name, FallbackTexture, StringComparison.OrdinalIgnoreCase))
+            return DdsHeader.WhiteDxt1();
+
+        return data is null || data.Length == 0 ? null : data;
+    }
+
+    private float DepthOf(string texture) => _result.Depths.GetValueOrDefault(texture, StageDepth.Near);
+
     private void AddImages()
     {
-        foreach (string name in _model.Textures)
+        StageLook look = Look;
+        bool baked = !_source.ForPreview;
+        _result.OwnLook = _source.Framing.Look;
+        List<(string Name, byte[]? Data)> read = _model.Textures.Select(name => (name, ImageData(name))).ToList();
+
+        List<(string Name, byte[]? Data)> finished = read.AsParallel().AsOrdered()
+            .Select(one => (one.Name, baked && one.Data is not null && !_supplied.ContainsKey(one.Name) ? look.Baked(one.Data, DepthOf(one.Name)) : one.Data))
+            .ToList();
+
+        foreach ((string name, byte[]? data) in finished)
         {
-            byte[]? data = _supplied.GetValueOrDefault(name) ?? _source.Image(name);
-
-            if (data is null && string.Equals(name, FallbackTexture, StringComparison.OrdinalIgnoreCase))
-                data = DdsHeader.WhiteDxt1();
-
-            if (data is null || data.Length == 0)
+            if (data is null)
             {
                 _result.Missing.Add(name);
                 continue;

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using FbxToMua.Core.Formats.Evb;
+using FbxToMua.Core.Export;
 using FbxToMua.Core.Sources;
 
 namespace FbxToMua.Core.Import;
@@ -126,9 +127,9 @@ public static class ImStageNote
 
 public static class ImStageBlock
 {
-    public static string For(string stage, GameKind game, float tilt, string readable)
+    public static string For(string stage, GameKind game, float tilt, string readable, StageLook look)
     {
-        string list = $"\tBg_000 =\r\n\t{{\r\n\t\tName = \"{readable}\",\r\n\t\tDataFile = \"{stage}\",\r\n\r\n{ArcLooks.Block(stage, game, tilt)}\t}}\r\n";
+        string list = $"\tBg_000 =\r\n\t{{\r\n\t\tName = \"{readable}\",\r\n\t\tDataFile = \"{stage}\",\r\n\r\n{ArcLooks.Block(stage, game, tilt, look)}\t}}\r\n";
 
         return BgListText.Block(list, stage) ?? string.Empty;
     }

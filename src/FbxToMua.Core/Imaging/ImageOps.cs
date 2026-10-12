@@ -9,6 +9,7 @@ public static class ImageOps
     private const byte Queued = 1;
     private const byte Filled = 2;
     private const int BleedPasses = 16;
+    private const int Halving = 2;
 
     private static readonly (int X, int Y)[] Steps = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
@@ -90,6 +91,19 @@ public static class ImageOps
         }
 
         return resized;
+    }
+
+    public static BgraImage Halved(BgraImage source)
+    {
+        BgraImage halved = Blank(Math.Max(1, source.Width / Halving), Math.Max(1, source.Height / Halving));
+
+        for (int y = 0; y < halved.Height; ++y)
+        {
+            for (int x = 0; x < halved.Width; ++x)
+                Average(source, x * Halving, y * Halving, halved.Pixels, halved.At(x, y));
+        }
+
+        return halved;
     }
 
     public static void Copy(BgraImage target, BgraImage source, int x, int y)
@@ -362,5 +376,34 @@ public static class ImageOps
 
         for (int c = 0; c < Alpha; ++c)
             image.Pixels[pixel + c] = (byte)(total[c] / near);
+    }
+
+    private static void Average(BgraImage source, int left, int top, byte[] target, int at)
+    {
+        Span<float> sum = stackalloc float[Channels];
+        int taken = 0;
+
+        for (int y = top; y < top + Halving; ++y)
+        {
+            for (int x = left; x < left + Halving; ++x)
+            {
+                if (!source.Inside(x, y))
+                    continue;
+
+                int input = source.At(x, y);
+                float alpha = source.Pixels[input + Alpha];
+
+                for (int c = 0; c < Alpha; ++c)
+                    sum[c] += source.Pixels[input + c] * alpha;
+
+                sum[Alpha] += alpha;
+                ++taken;
+            }
+        }
+
+        for (int c = 0; c < Alpha; ++c)
+            target[at + c] = sum[Alpha] > 0.0f ? (byte)MathF.Round(sum[c] / sum[Alpha]) : (byte)0;
+
+        target[at + Alpha] = (byte)MathF.Round(sum[Alpha] / taken);
     }
 }

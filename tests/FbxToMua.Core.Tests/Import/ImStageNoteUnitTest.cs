@@ -1,3 +1,4 @@
+using FbxToMua.Core.Export;
 using FbxToMua.Core.Formats.Evb;
 using FbxToMua.Core.Import;
 using FbxToMua.Core.Sources;
@@ -102,5 +103,37 @@ public class ImStageNoteUnitTest
         // Assert
         Assert.Contains("\tFOV = 41.7,\r\n", block);
         Assert.Contains("\tViewRotationX = 3.0,\r\n", block);
+    }
+
+    [Fact]
+    public void Block_NoLookChosen_WritesFogOffAndThePlainBloom()
+    {
+        // Arrange
+        string stage = "bg_unknown";
+
+        // Act
+        string block = ArcLooks.Block(stage, GameKind.Bbtag);
+
+        // Assert
+        Assert.Contains("\tIsFog = 0,\r\n\tFogStart = 0.0,\r\n\tFogEnd = 100.0,\r\n\tFogColor = [ 0.0, 0.0, 0.0, 0.0 ],\r\n", block);
+        Assert.Contains("\tBGBloomEnable = 1,\r\n\tBGBloomBlightness = 0.8,\r\n\tBGBloomPower = 2.0,\r\n" +
+            "\tBGBloomBiassR = 1.0,\r\n\tBGBloomBiassG = 1.0,\r\n\tBGBloomBiassB = 1.0,\r\n\tBGBloomBlurRadius = 1.0,\r\n" +
+            "\tBGBloomTextureSize = 256,\r\n\tBGBloomAlpha = 0.5,\r\n", block);
+    }
+
+    [Fact]
+    public void Block_ChosenLook_WritesItsFogAndBloom()
+    {
+        // Arrange
+        StageLook look = new(new FogLook(true, 3.0f, 100.0f, -3.0f, 1.0f, 1.0f), new BloomLook(true, 0.6f, 2.0f, 2.3f, 1.5f, 0.6f, 1.2f, 0.4f));
+
+        // Act
+        string block = ArcLooks.Block("bg_unknown", GameKind.Bbtag, 0.0f, look);
+
+        // Assert
+        Assert.Contains("\tIsFog = 1,\r\n\tFogStart = 3.0,\r\n\tFogEnd = 100.0,\r\n\tFogColor = [ -3.0, 1.0, 1.0, 1.0 ],\r\n", block);
+        Assert.Contains("\tBGBloomBlightness = 0.6,\r\n\tBGBloomPower = 2.0,\r\n\tBGBloomBiassR = 2.3,\r\n\tBGBloomBiassG = 1.5,\r\n" +
+            "\tBGBloomBiassB = 0.6,\r\n\tBGBloomBlurRadius = 1.2,\r\n", block);
+        Assert.Contains("\tBGBloomAlpha = 0.4,\r\n", block);
     }
 }

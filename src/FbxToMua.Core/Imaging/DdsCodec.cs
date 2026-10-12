@@ -8,6 +8,10 @@ public static class DdsCodec
     private const uint FourCcFlag = 4;
     private const uint Dxt5 = 0x35545844;
     private const uint Dxt1 = 0x31545844;
+    private const uint Dxt3 = 0x33545844;
+    private const int NibbleBits = 4;
+    private const int NibbleMask = 0xf;
+    private const int NibbleToByte = 17;
     private const int MaxSide = 8192;
     private const int BlockSide = 4;
     private const int Dxt5Stride = 16;
@@ -22,6 +26,7 @@ public static class DdsCodec
     private const uint TextureCaps = 0x1000;
     private const int ReservedBytes = 44;
     private const int TailBytes = 16;
+    private const int AlphaTableSize = 8;
 
     private sealed class Block
     {
@@ -30,6 +35,8 @@ public static class DdsCodec
         public ulong AlphaBits { get; set; }
         public uint ColourBits { get; set; }
         public bool FourColours { get; set; }
+        public ulong ExplicitAlpha { get; set; }
+        public bool Explicit { get; set; }
     }
 
     public static BgraImage? DecodePlain(byte[] dds)
@@ -61,7 +68,8 @@ public static class DdsCodec
         if ((flags & FourCcFlag) == 0)
             return DecodePlain(dds);
 
-        bool five = fourcc == Dxt5;
+        bool three = fourcc == Dxt3;
+        bool five = fourcc == Dxt5 || three;
 
         if (!five && fourcc != Dxt1)
             return null;
@@ -74,15 +82,17 @@ public static class DdsCodec
             return null;
 
         image.Pixels = new byte[image.Width * image.Height * BgraImage.Channels];
+        Block block = new();
 
         for (int by = 0; by < blocksY; ++by)
         {
             for (int bx = 0; bx < blocksX; ++bx)
             {
                 int source = DdsHeader.HeaderBytes + (by * blocksX + bx) * stride;
-                Block block = new();
 
-                if (five)
+                if (three)
+                    ReadExplicitAlpha(dds, source, block);
+                else if (five)
                     ReadAlpha(dds, source, block);
 
                 ReadColour(dds, five ? source + 8 : source, five, block);
@@ -170,6 +180,17 @@ public static class DdsCodec
         block.AlphaBits = bits;
     }
 
+    private static void ReadExplicitAlpha(byte[] source, int at, Block block)
+    {
+        ulong bits = 0;
+
+        for (int i = 0; i < AlphaTableSize; ++i)
+            bits |= (ulong)source[at + i] << (8 * i);
+
+        block.ExplicitAlpha = bits;
+        block.Explicit = true;
+    }
+
     private static void ReadColour(byte[] source, int at, bool five, Block block)
     {
         ushort c0 = (ushort)(source[at] | (source[at + 1] << 8));
@@ -197,6 +218,9 @@ public static class DdsCodec
 
     private static byte AlphaOf(Block block, bool five, int index)
     {
+        if (block.Explicit)
+            return (byte)(((block.ExplicitAlpha >> (NibbleBits * index)) & NibbleMask) * NibbleToByte);
+
         if (five)
             return block.AlphaTable[(block.AlphaBits >> (3 * index)) & 7];
 

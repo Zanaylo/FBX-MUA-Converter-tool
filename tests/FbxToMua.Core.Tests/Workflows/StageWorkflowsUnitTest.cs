@@ -47,6 +47,19 @@ public sealed class StageWorkflowsUnitTest : IDisposable
     }
 
     [Fact]
+    public void Export_ForPreview_LeavesTheMotionsOut()
+    {
+        // Arrange
+        string folder = StageFolderNamed("bg114");
+
+        // Act
+        ExportedStage exported = StageWorkflows.Export(folder, null, null, null, true);
+
+        // Assert
+        Assert.Empty(exported.Result.Motions);
+    }
+
+    [Fact]
     public void Export_Reframed_ReachesTheExport()
     {
         // Arrange

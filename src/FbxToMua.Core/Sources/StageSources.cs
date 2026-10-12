@@ -1,6 +1,5 @@
 using FbxToMua.Core.Export;
 using FbxToMua.Core.Formats.Objects;
-using FbxToMua.Core.Geometry;
 
 namespace FbxToMua.Core.Sources;
 
@@ -40,7 +39,7 @@ public static class StageSources
         {
             Model = model,
             Image = file => source.Read(stage, file),
-            Framing = FramingOf(source.BgList(), stage),
+            Framing = FramingFor(source.Game, source.BgList(), stage),
             Stage = name,
             Objects = sheet.Length == 0 ? [] : objects,
             Sheet = sheet,
@@ -48,27 +47,18 @@ public static class StageSources
         };
     }
 
+    public static Framing FramingFor(GameKind game, string bgList, string stage)
+    {
+        Framing framing = FramingOf(bgList, stage);
+
+        return game == GameKind.Dfci ? framing with { Look = StageLook.Plain } : framing;
+    }
+
     public static Framing FramingOf(string bgList, string stage)
     {
-        Framing framing = Framing.Neutral;
         string? block = BgListText.Block(bgList, stage);
 
-        if (block is null)
-            return framing;
-
-        if (StageText.TryTriple(BgListText.Field(block, "Scale") ?? string.Empty, out Float3 scale))
-            framing.Scale = scale;
-
-        if (StageText.TryTriple(BgListText.Field(block, "Position") ?? string.Empty, out Float3 position))
-            framing.Position = position;
-
-        if (StageText.TrySingle(BgListText.Field(block, "ViewRotationX") ?? string.Empty, out float tilt))
-            framing.Tilt = tilt;
-
-        if (StageText.TrySingle(BgListText.Field(block, "ViewRotationY") ?? string.Empty, out float turn))
-            framing.Turn = turn;
-
-        return framing;
+        return block is null ? Framing.Neutral : StageText.FramingFrom(key => BgListText.Field(block, key) ?? string.Empty);
     }
 
     private static IStageSource? Opened(FolderSource source) => source.IsOpen ? source : null;

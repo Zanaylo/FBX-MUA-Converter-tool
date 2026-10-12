@@ -42,7 +42,7 @@ public sealed class ReframeRecords : IReframeRecords
         Save();
     }
 
-    private static string KeyOf(string folder, string? stage) => Path.TrimEndingDirectorySeparator(folder) + KeySeparator + (stage ?? string.Empty);
+    public static string KeyOf(string folder, string? stage) => Path.TrimEndingDirectorySeparator(folder) + KeySeparator + (stage ?? string.Empty);
 
     private void Save()
     {

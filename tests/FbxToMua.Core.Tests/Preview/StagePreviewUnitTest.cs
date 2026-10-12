@@ -36,6 +36,19 @@ public class StagePreviewUnitTest
     }
 
     [Fact]
+    public void Of_SmallStage_CarriesTheFloorsThatCanTakeTheShadow()
+    {
+        // Arrange
+        ExportResult result = SmallExport();
+
+        // Act
+        StagePreview preview = StagePreview.Of(result);
+
+        // Assert
+        Assert.Equal(result.ShadowCandidates, preview.ShadowCandidates);
+    }
+
+    [Fact]
     public void Of_SmallStage_ListsTheMeshesInTheOrderTheGameDrawsThem()
     {
         // Arrange
@@ -103,6 +116,20 @@ public class StagePreviewUnitTest
 
         // Assert
         Assert.Equal((4, 4), (floor.Width, floor.Height));
+        Assert.Equal([0x00, 0x00, 0xff, 0xff], floor.Pixels[..4]);
+    }
+
+    [Fact]
+    public void Of_TextureOverTheLimit_HalvesItUntilItFits()
+    {
+        // Arrange
+        ExportResult result = SmallExport();
+
+        // Act
+        BgraImage floor = StagePreview.Of(result, 2).Images["floor.dds"];
+
+        // Assert
+        Assert.Equal((2, 2), (floor.Width, floor.Height));
         Assert.Equal([0x00, 0x00, 0xff, 0xff], floor.Pixels[..4]);
     }
 

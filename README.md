@@ -37,7 +37,16 @@ When a stage comes out with the wrong angle, move the camera and the fighters ar
 distance, turn, tilt, stage scale) and press **Keep this framing**. The framing is saved per stage and
 used by every **Install in game** and **Export files only...** after that; **Reset framing** goes back
 to the converted one. The fighters' positions are only for looking: the camera follows the middle of
-the two, the way it does in a fight, and **Free look** lets you orbit around the stage.
+the two, the way it does in a fight, and **Free look** lets you orbit around the stage. **Fighters'
+shadow** sets the light the game casts their shadow with (turn all the way round, so it can fall
+behind, in front or to either side, length down to straight under the fighters, and strength); the
+stand-ins cast it in the viewer, and it's saved with the framing. **Fog and bloom** start from the
+stage's own UNI2 values (bloom switched off) and are baked into the exported textures; the preview
+follows them as you change them. **Keep the stage out of the game's bloom** draws the stage's solid parts
+so that BBTAG's own bloom setting leaves them alone while the fighters keep theirs. The import tab has the same fog and bloom fields, written into the
+UNI2 stage. The viewer is
+its own window: the app stays usable while it is open, and pressing **Viewer...** again for the same
+stage brings it back to the front.
 
 On the Steam release of BBTAG the files are encrypted under `asset\`, and FbxToMua writes them
 encrypted the same way. The executable needs no patch.

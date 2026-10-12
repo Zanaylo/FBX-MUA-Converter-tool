@@ -38,7 +38,9 @@ public static class StageFactory
 
     public static List<float> IdentityTrack() => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
-    public static FbxExModel SmallStage()
+    public static FbxExModel SmallStage() => Row((Floor(), IdentityTrack()), (Spinner(), Spin()));
+
+    public static FbxExModel Row(params (FbxExNode Node, List<float> Anime)[] leaves)
     {
         FbxExModel model = new() { Textures = ["floor.dds"] };
         model.Materials.Add(new FbxExMaterial { FileName = "floor", TextureIndex = 0 });
@@ -46,9 +48,24 @@ public static class StageFactory
 
         FbxExNode root = FbxExNode.Branch();
         root.Child = 1;
+        model.Nodes = [root];
+        model.Animes = [IdentityTrack()];
 
+        for (int i = 0; i < leaves.Length; ++i)
+        {
+            if (i + 1 < leaves.Length)
+                leaves[i].Node.Sibling = i + 2;
+
+            model.Nodes.Add(leaves[i].Node);
+            model.Animes.Add(leaves[i].Anime);
+        }
+
+        return model;
+    }
+
+    public static FbxExNode Floor()
+    {
         FbxExNode floor = FbxExNode.Leaf();
-        floor.Sibling = 2;
         floor.Vertices =
         [
             -1, 0, -1, 0, 1, 0, 1, 1, 1, 1, 0, 0,
@@ -58,6 +75,11 @@ public static class StageFactory
         ];
         floor.Submeshes = [new FbxExSubmesh { Material = 0, Indices = [0, 2, 1, 0, 3, 2] }];
 
+        return floor;
+    }
+
+    public static FbxExNode Spinner()
+    {
         FbxExNode spinner = FbxExNode.Leaf();
         spinner.BlendMode = 1;
         spinner.Alpha = 1;
@@ -70,8 +92,11 @@ public static class StageFactory
         ];
         spinner.Submeshes = [new FbxExSubmesh { Material = 1, Indices = [0, 2, 1] }];
 
-        model.Nodes = [root, floor, spinner];
+        return spinner;
+    }
 
+    public static List<float> Spin()
+    {
         List<float> spin = [];
 
         for (int frame = 0; frame < 8; ++frame)
@@ -86,9 +111,7 @@ public static class StageFactory
             spin.AddRange(step);
         }
 
-        model.Animes = [IdentityTrack(), IdentityTrack(), spin];
-
-        return model;
+        return spin;
     }
 
     public static FbxExNode FarSky()

@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using FbxToMua.Core.Preview;
 
 namespace FbxToMua.App.Viewer;
 
@@ -16,9 +17,12 @@ public static class FightMarkers
     private const double LineDepth = 8.0;
     private const double LineLift = 0.5;
     private const byte MarkerAlpha = 0xb0;
+    private const double ShadowLift = 0.5;
+    private const double Opaque = 255.0;
 
     public static readonly Color FighterOneColour = Color.FromArgb(MarkerAlpha, 0xe0, 0x40, 0x40);
     public static readonly Color FighterTwoColour = Color.FromArgb(MarkerAlpha, 0x40, 0x80, 0xe0);
+    private static readonly Rect WholeSilhouette = new(0.0, 0.0, 1.0, 1.0);
     private static readonly Color LineColour = Color.FromArgb(MarkerAlpha, 0xf0, 0xd0, 0x30);
 
     public static GeometryModel3D Fighter(Color colour)
@@ -28,6 +32,23 @@ public static class FightMarkers
         Material material = Frozen(new DiffuseMaterial(Silhouette(colour)));
 
         return new GeometryModel3D(quad, material) { BackMaterial = material };
+    }
+
+    public static GeometryModel3D Shadow(ShadowSurface surface, double strength)
+    {
+        MeshGeometry3D mesh = new()
+        {
+            Positions = new Point3DCollection(surface.Positions.Select(point => new Point3D(point[0], point[1] + ShadowLift, point[2]))),
+            TextureCoordinates = new PointCollection(Enumerable.Range(0, surface.Positions.Length).Select(v => new Point(surface.Uvs[v * 2], surface.Uvs[v * 2 + 1]))),
+            TriangleIndices = new Int32Collection(surface.Triangles),
+        };
+        mesh.Freeze();
+        byte alpha = (byte)Math.Round(Math.Clamp(strength, 0.0, 1.0) * Opaque);
+        Material material = Frozen(new DiffuseMaterial(Silhouette(Color.FromArgb(alpha, 0, 0, 0))));
+        GeometryModel3D shadow = new(mesh, material) { BackMaterial = material };
+        shadow.Freeze();
+
+        return shadow;
     }
 
     public static GeometryModel3D FightLine()
@@ -64,6 +85,9 @@ public static class FightMarkers
         {
             Viewbox = new Rect(0.0, 0.0, FighterWidth, FighterHeight),
             ViewboxUnits = BrushMappingMode.Absolute,
+            Viewport = WholeSilhouette,
+            ViewportUnits = BrushMappingMode.Absolute,
+            TileMode = TileMode.None,
         };
         brush.Freeze();
 

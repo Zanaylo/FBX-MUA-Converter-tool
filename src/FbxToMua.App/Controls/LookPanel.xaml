@@ -1,0 +1,40 @@
+<UserControl x:Class="FbxToMua.App.Controls.LookPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:FbxToMua.App.Controls">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="Shown" />
+    </UserControl.Resources>
+    <StackPanel>
+        <TextBlock Style="{StaticResource Caption}" Text="Fog" />
+        <TextBlock Style="{StaticResource Hint}"
+                   Text="UNI2's BgList fog: the stage leans towards the colour by (end - distance) / (end - start). The colour can go below 0 and above 1, the way UNI2's stages set it." />
+        <CheckBox Margin="0,4" Content="Fog" IsChecked="{Binding FogOn}" />
+        <CheckBox Margin="0,4" Content="Fog by distance (off: the same everywhere, distance 1)" IsChecked="{Binding FogByDistance}"
+                  Visibility="{Binding Exporting, Converter={StaticResource Shown}}" />
+        <controls:NumberRow Label="Start" Minimum="-500" Maximum="2000" Step="1" Value="{Binding FogStart}" />
+        <controls:NumberRow Label="End" Minimum="-500" Maximum="10000" Step="1" Value="{Binding FogEnd}" />
+        <controls:NumberRow Label="Red" Minimum="-8" Maximum="3" Step="0.05" Value="{Binding FogRed}" />
+        <controls:NumberRow Label="Green" Minimum="-8" Maximum="3" Step="0.05" Value="{Binding FogGreen}" />
+        <controls:NumberRow Label="Blue" Minimum="-8" Maximum="3" Step="0.05" Value="{Binding FogBlue}" />
+        <Button HorizontalAlignment="Left" Margin="0,8,0,0" Padding="10,4" Content="Reset fog" Command="{Binding ResetFog}" />
+
+        <TextBlock Style="{StaticResource Caption}" Text="Bloom" />
+        <TextBlock Style="{StaticResource Hint}"
+                   Text="UNI2's BgList background bloom: pow(colour x brightness, power) x the RGB bias, blurred and added at the strength." />
+        <CheckBox Margin="0,4" Content="Bloom" IsChecked="{Binding BloomOn}" />
+        <controls:NumberRow Label="Brightness" Minimum="0" Maximum="2" Step="0.05" Value="{Binding BloomBrightness}" />
+        <controls:NumberRow Label="Power" Minimum="0.1" Maximum="5" Step="0.05" Value="{Binding BloomPower}" />
+        <controls:NumberRow Label="Red" Minimum="0" Maximum="5" Step="0.05" Value="{Binding BloomRed}" />
+        <controls:NumberRow Label="Green" Minimum="0" Maximum="5" Step="0.05" Value="{Binding BloomGreen}" />
+        <controls:NumberRow Label="Blue" Minimum="0" Maximum="5" Step="0.05" Value="{Binding BloomBlue}" />
+        <controls:NumberRow Label="Blur radius" Minimum="0" Maximum="10" Step="0.1" Value="{Binding BloomRadius}" />
+        <controls:NumberRow Label="Strength" Minimum="0" Maximum="1" Step="0.05" Value="{Binding BloomStrength}" />
+        <StackPanel Visibility="{Binding Exporting, Converter={StaticResource Shown}}">
+            <CheckBox Margin="0,8,0,4" Content="Keep the stage out of the game's bloom" IsChecked="{Binding ClearOfGameBloom}" />
+            <TextBlock Style="{StaticResource Hint}"
+                       Text="BBTAG's bloom setting blooms whatever is bright and writes alpha into the frame, the stage included. With this on, solid nodes in front of every far node without depth are drawn opaque with an alpha of 1/255, so the fighters, effects and the stage's see-through and additive parts still bloom and the rest doesn't. Not checked in BBCF." />
+        </StackPanel>
+        <Button HorizontalAlignment="Left" Margin="0,8,0,0" Padding="10,4" Content="Reset bloom" Command="{Binding ResetBloom}" />
+    </StackPanel>
+</UserControl>

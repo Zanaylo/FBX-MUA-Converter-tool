@@ -25,29 +25,52 @@ public sealed class PreviewMesh
 
 public sealed class StagePreview
 {
+    public const int MostTextureSide = 1024;
     private const int NoTexture = -1;
 
     public List<PreviewMesh> Meshes { get; } = [];
     public Dictionary<string, BgraImage> Images { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, float> Depths { get; } = new(StringComparer.OrdinalIgnoreCase);
     public int Tilt { get; init; }
+    public IReadOnlyList<ShadowCandidate> ShadowCandidates { get; init; } = [];
 
-    public static StagePreview Of(ExportResult result)
+    public static StagePreview Of(ExportResult result, int mostTextureSide = MostTextureSide)
     {
         MuaReader model = MuaReader.Read(result.Model) ?? throw new StageConversionException("the exported model could not be read back");
-        StagePreview preview = new() { Tilt = result.Tilt };
+        StagePreview preview = new() { Tilt = result.Tilt, ShadowCandidates = result.ShadowCandidates };
+
+        foreach ((string texture, float depth) in result.Depths)
+            preview.Depths[texture] = depth;
 
         foreach (MuaReadMesh mesh in model.Meshes.OrderByDescending(mesh => mesh.Pivot[2]))
             preview.Meshes.Add(MeshOf(model, mesh));
 
-        foreach (ExportFile image in result.Images)
-        {
-            BgraImage? decoded = DdsCodec.Decode(image.Data);
+        List<(string Name, BgraImage? Image)> decoded = result.Images.AsParallel().AsOrdered()
+            .Select(image => (image.Name, Readable(image, mostTextureSide)))
+            .ToList();
 
-            if (decoded is not null)
-                preview.Images[image.Name] = decoded;
+        foreach ((string name, BgraImage? image) in decoded)
+        {
+            if (image is not null)
+                preview.Images[name] = image;
         }
 
         return preview;
+    }
+
+    private static BgraImage? Readable(ExportFile image, int mostSide)
+    {
+        return DdsCodec.Decode(image.Data) is BgraImage decoded ? Fitted(decoded, mostSide) : null;
+    }
+
+    private static BgraImage Fitted(BgraImage image, int mostSide)
+    {
+        BgraImage fitted = image;
+
+        while (fitted.Width > mostSide || fitted.Height > mostSide)
+            fitted = ImageOps.Halved(fitted);
+
+        return fitted;
     }
 
     private static PreviewMesh MeshOf(MuaReader model, MuaReadMesh mesh)

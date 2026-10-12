@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using FbxToMua.App.Services;
+using FbxToMua.Core.Export;
 using FbxToMua.Core.Import;
 using FbxToMua.Core.Install;
 using FbxToMua.Core.Sources;
@@ -42,6 +43,8 @@ public sealed class ImportViewModel : ObservableObject
     public ICommand BrowseUni2 { get; }
     public ICommand InstallIntoMod { get; }
     public ICommand ExportFolderOnly { get; }
+
+    public LookEditor Look { get; } = new(StageLook.Imported, false);
 
     public GameChoice? Source
     {
@@ -121,8 +124,9 @@ public sealed class ImportViewModel : ObservableObject
         string folder = Source!.Folder;
         string stage = Stage!.Folder;
         string name = StageName;
+        StageLook look = Look.Look;
 
-        return Task.Run(() => StageWorkflows.Import(folder, stage, name));
+        return Task.Run(() => StageWorkflows.Import(folder, stage, name, look));
     }
 
     private async Task InstallIntoModAsync()

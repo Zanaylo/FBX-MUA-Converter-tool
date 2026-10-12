@@ -87,6 +87,50 @@ public class MmotUnitTest
     }
 
     [Fact]
+    public void Hold_OneChannel_KeysOnlyItsTracks()
+    {
+        // Arrange
+        MmotBone bone = MmotBone.Still();
+        Pose pose = PoseMathUnitTest.TurnedPose();
+
+        // Act
+        bone.Hold(pose, 0);
+        bone.Hold(pose, 7, PoseChannel.Turn);
+        bone.Hold(pose, 9, PoseChannel.Size);
+
+        // Assert
+        Assert.Single(bone.Track[(int)MmotKind.Translation]);
+        Assert.Equal([0, 7], bone.Track[(int)MmotKind.Rotation].Select(key => key.Frame));
+        Assert.Equal([0, 7], bone.Track[(int)MmotKind.Turn].Select(key => key.Frame));
+        Assert.Equal([0, 9], bone.Track[(int)MmotKind.Scale].Select(key => key.Frame));
+        Assert.Equal(pose.Turn, bone.Track[(int)MmotKind.Turn][1].Value);
+    }
+
+    [Fact]
+    public void Pose_TracksKeyedApart_InterpolatesEachOnItsOwnKeys()
+    {
+        // Arrange
+        Pose there = Pose.Rest;
+        there.Translation = new Float3(4.0f, 0.0f, 0.0f);
+        MmotBone still = MmotBone.Still();
+        still.Hold(Pose.Rest, 0);
+        still.Hold(Pose.Rest, 10);
+        MmotBone moving = MmotBone.Still();
+        moving.Hold(Pose.Rest, 0);
+        moving.Hold(there, 10, PoseChannel.Move);
+        moving.Hold(there, 10, PoseChannel.Size);
+        MmotMotion motion = MmotMotion.Read(MmotWriter.Build(new MmotTake("mesh_001.DIG", "mesh_001", ["mesh_001"], 10, [still, moving])))!;
+        Pose rest = Pose.Rest;
+
+        // Act
+        Matrix posed = motion.Pose(1, 5, rest.Translation, rest.Rotation, rest.Scale);
+
+        // Assert
+        Assert.True(Tolerance.Near(posed[12], 2.0f, 1e-5f));
+        Assert.True(Tolerance.Near(posed[0], 1.0f, 1e-5f));
+    }
+
+    [Fact]
     public void Read_NotAMotion_GivesNothing()
     {
         // Arrange

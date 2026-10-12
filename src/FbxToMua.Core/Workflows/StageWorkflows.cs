@@ -8,7 +8,7 @@ public sealed record ExportedStage(ExportResult Result, string Name);
 
 public static class StageWorkflows
 {
-    public static ExportedStage Export(string folder, string? stage, string? name = null, Reframe? reframe = null)
+    public static ExportedStage Export(string folder, string? stage, string? name = null, Reframe? reframe = null, bool forPreview = false)
     {
         if (StageFolder.Holds(folder))
         {
@@ -17,7 +17,7 @@ public static class StageWorkflows
 
             ExportSource loaded = StageFolder.Load(folder, StageNames.Stem(title));
 
-            return new ExportedStage(StageExporter.Convert(loaded with { Reframe = reframe ?? Reframe.None }), title);
+            return new ExportedStage(StageExporter.Convert(loaded with { Reframe = reframe ?? Reframe.None, ForPreview = forPreview }), title);
         }
 
         using IStageSource source = StageSources.Open(folder) ?? throw new StageConversionException($"no French-Bread stages found in {folder}");
@@ -27,16 +27,16 @@ public static class StageWorkflows
 
         ExportSource read = StageSources.ExportSourceOf(source, chosen, StageNames.Stem(named, chosen.ToLowerInvariant()));
 
-        return new ExportedStage(StageExporter.Convert(read with { Reframe = reframe ?? Reframe.None }), named);
+        return new ExportedStage(StageExporter.Convert(read with { Reframe = reframe ?? Reframe.None, ForPreview = forPreview }), named);
     }
 
-    public static ImStage Import(string folder, string stage, string? name = null)
+    public static ImStage Import(string folder, string stage, string? name = null, StageLook? look = null)
     {
         ArcSource source = ArcSource.Open(folder) ?? throw new StageConversionException($"no BBTAG, BBCF or P4U2 stages found in {folder}");
         ArcStageResult result = source.Convert(stage) ?? throw new StageConversionException($"{stage} could not be read as a stage");
 
         string title = source.NameOf(stage);
 
-        return new ImStage(name ?? title + ImStageFolder.Tag(source.Game), title, folder, stage, source.Game, result);
+        return new ImStage(name ?? title + ImStageFolder.Tag(source.Game), title, folder, stage, source.Game, result, look ?? StageLook.Imported);
     }
 }

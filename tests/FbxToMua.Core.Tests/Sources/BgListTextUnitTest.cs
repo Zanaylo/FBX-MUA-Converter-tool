@@ -92,6 +92,49 @@ public class BgListTextUnitTest
         Assert.Equal(3.0f, framing.Tilt);
     }
 
+    [Fact]
+    public void FramingOf_FoggedBlock_ReadsTheFog()
+    {
+        // Arrange
+        const string list = "BgList <-\r\n{\r\n\tBg_020 =\r\n\t{\r\n\t\tDataFile = \"bg020\",\r\n\t\tIsFog = 1,\r\n" +
+            "\t\tFogStart = 0.0, FogEnd = 1000.0,\r\n\t\tFogColor = [ 1.0, -0.5, 0.2, 1.0 ], // RGBA\r\n\t}\r\n}\r\n";
+
+        // Act
+        Framing framing = StageSources.FramingOf(list, "bg020");
+
+        // Assert
+        Assert.Equal(new FogLook(true, 0.0f, 1000.0f, 1.0f, -0.5f, 0.2f), framing.Look.Fog);
+        Assert.False(framing.Look.Fog.ByDistance);
+    }
+
+    [Fact]
+    public void FramingFor_Dfci_LeavesItsFogOut()
+    {
+        // Arrange
+        const string list = "BgList <-\r\n{\r\n\tBg_001 =\r\n\t{\r\n\t\tDataFile = \"bg001\",\r\n\t\tIsFog = 1,\r\n" +
+            "\t\tFogStart = 0.0, FogEnd = 1000.0,\r\n\t\tFogColor = [ 2.0, 0.0, 0.0, 1.0 ],\r\n\t}\r\n}\r\n";
+
+        // Act
+        Framing framing = StageSources.FramingFor(GameKind.Dfci, list, "bg001");
+
+        // Assert
+        Assert.Equal(StageLook.Plain, framing.Look);
+    }
+
+    [Fact]
+    public void FramingFor_Uni2_KeepsItsFog()
+    {
+        // Arrange
+        const string list = "BgList <-\r\n{\r\n\tBg_001 =\r\n\t{\r\n\t\tDataFile = \"bg001\",\r\n\t\tIsFog = 1,\r\n" +
+            "\t\tFogStart = 0.0, FogEnd = 1000.0,\r\n\t\tFogColor = [ 2.0, 0.0, 0.0, 1.0 ],\r\n\t}\r\n}\r\n";
+
+        // Act
+        Framing framing = StageSources.FramingFor(GameKind.Uni2, list, "bg001");
+
+        // Assert
+        Assert.True(framing.Look.Fog.On);
+    }
+
     [Theory]
     [InlineData("\"Town\"", "Town")]
     [InlineData("Town", "Town")]

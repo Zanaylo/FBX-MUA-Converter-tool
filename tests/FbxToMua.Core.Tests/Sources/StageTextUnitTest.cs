@@ -23,6 +23,60 @@ public class StageTextUnitTest
     }
 
     [Fact]
+    public void Framing_StageNoteWithClearFog_IsNotFogged()
+    {
+        // Arrange
+        string note = "IsFog = 1,\r\nFogStart = -100.0, FogEnd = 1000.0,\r\nFogColor = [ 0.0, 0.0, 0.0, 0.0 ],\r\n";
+
+        // Act
+        Framing framing = StageText.Framing(note);
+
+        // Assert
+        Assert.Equal((-100.0f, 1000.0f), (framing.Look.Fog.Start, framing.Look.Fog.End));
+        Assert.False(framing.Look.Fog.On);
+    }
+
+    [Fact]
+    public void Framing_FogSwitchedOff_IsNotFogged()
+    {
+        // Arrange
+        string note = "IsFog = 0,\r\nFogStart = 0.0, FogEnd = 100.0,\r\nFogColor = [ 1.0, 0.0, 0.0, 1.0 ],\r\n";
+
+        // Act
+        Framing framing = StageText.Framing(note);
+
+        // Assert
+        Assert.False(framing.Look.Fog.On);
+    }
+
+    [Fact]
+    public void Framing_StageNote_ReadsTheBloomButLeavesItOff()
+    {
+        // Arrange
+        string note = "BGBloomEnable = 1,\r\nBGBloomBlightness = 0.6,\r\nBGBloomPower = 2.00,\r\nBGBloomBiassR = 2.3,\r\n" +
+            "BGBloomBiassG = 1.5,\r\nBGBloomBiassB = 0.6,\r\nBGBloomBlurRadius = 1.20,\r\nBGBloomTextureSize = 256,\r\nBGBloomAlpha = 0.4,\r\n";
+
+        // Act
+        Framing framing = StageText.Framing(note);
+
+        // Assert
+        Assert.Equal(new BloomLook(false, 0.6f, 2.0f, 2.3f, 1.5f, 0.6f, 1.2f, 0.4f), framing.Look.Bloom);
+    }
+
+    [Fact]
+    public void Framing_NoteWithoutLook_IsPlain()
+    {
+        // Arrange
+        string note = "Scale = [ 1.0, 1.0, 1.0 ],\r\n";
+
+        // Act
+        Framing framing = StageText.Framing(note);
+
+        // Assert
+        Assert.Equal(StageLook.Plain, framing.Look);
+    }
+
+    [Fact]
     public void Framing_EmptyNote_IsNeutral()
     {
         // Arrange
@@ -105,5 +159,18 @@ public class StageTextUnitTest
 
         // Assert
         Assert.Equal(expected, value);
+    }
+
+    [Fact]
+    public void Framing_StageWithAVanishingPoint_FogsByDistance()
+    {
+        // Arrange
+        string note = "VanishingPoint = 0.2\r\nIsFog = 1,\r\nFogStart = 0.0, FogEnd = 1000.0,\r\nFogColor = [ 1.0, -0.5, 0.2, 1.0 ],\r\n";
+
+        // Act
+        Framing framing = StageText.Framing(note);
+
+        // Assert
+        Assert.True(framing.Look.Fog.ByDistance);
     }
 }

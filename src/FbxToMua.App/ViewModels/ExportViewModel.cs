@@ -190,13 +190,13 @@ public sealed class ExportViewModel : ObservableObject
 
     private void RefreshFraming() => FramingNote = ReframeNote.Of(ChosenReframe());
 
-    private Task<ExportedStage> Exported(Reframe reframe)
+    private Task<ExportedStage> Exported(Reframe reframe, bool forPreview = false)
     {
         string folder = Source!.Folder;
         string? stage = Stage?.Folder;
         string name = StageName;
 
-        return Task.Run(() => StageWorkflows.Export(folder, stage, name, reframe));
+        return Task.Run(() => StageWorkflows.Export(folder, stage, name, reframe, forPreview));
     }
 
     private async Task ViewAsync()
@@ -204,21 +204,25 @@ public sealed class ExportViewModel : ObservableObject
         string folder = Source!.Folder;
         string? stage = Stage?.Folder;
         string name = StageName;
+        string key = ReframeRecords.KeyOf(folder, stage);
+
+        if (_viewer.Bring(key))
+            return;
 
         await _log.Guarded(async () =>
         {
             _log.Write($"Opening {name} in the viewer...");
-            ExportedStage exported = await Exported(Reframe.None);
+            ExportedStage exported = await Exported(Reframe.None, forPreview: true);
             StagePreview preview = await Task.Run(() => StagePreview.Of(exported.Result));
-            Reframe? kept = await _viewer.Adjust(name, preview, _reframes.Of(folder, stage));
-
-            if (kept is null)
-                return;
-
-            _reframes.Keep(folder, stage, kept.Value);
-            RefreshFraming();
-            _log.Write($"{name}: {FramingNote}. Install or export again to put it in the game.");
+            await _viewer.Open(new ViewerRequest(key, name, preview, _reframes.Of(folder, stage), exported.Result.OwnLook, kept => KeepFraming(folder, stage, name, kept)));
         });
+    }
+
+    private void KeepFraming(string folder, string? stage, string name, Reframe kept)
+    {
+        _reframes.Keep(folder, stage, kept);
+        RefreshFraming();
+        _log.Write($"{name}: {ReframeNote.Of(kept)}. Install or export again to put it in the game.");
     }
 
     private async Task ExportFilesAsync()

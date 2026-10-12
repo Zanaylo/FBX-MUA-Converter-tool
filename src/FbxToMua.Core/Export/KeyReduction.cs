@@ -9,7 +9,7 @@ public static class KeyReduction
     private const float ScaleTolerance = 1e-5f;
     private const int LongestSpan = 256;
 
-    public static List<int> Kept(IReadOnlyList<Pose> poses)
+    public static List<int> Kept(IReadOnlyList<Pose> poses, PoseChannel channel)
     {
         List<int> kept = [0];
         int last = poses.Count - 1;
@@ -19,7 +19,7 @@ public static class KeyReduction
         {
             int to = from + 1;
 
-            while (to < last && to + 1 - from <= LongestSpan && Fits(poses, from, to + 1))
+            while (to < last && to + 1 - from <= LongestSpan && Fits(poses, from, to + 1, channel))
                 ++to;
 
             kept.Add(to);
@@ -70,36 +70,54 @@ public static class KeyReduction
         return true;
     }
 
-    private static bool Fits(IReadOnlyList<Pose> poses, int from, int to)
+    private static bool Fits(IReadOnlyList<Pose> poses, int from, int to, PoseChannel channel)
     {
-        Pose a = poses[from];
-        Pose b = poses[to];
-
         for (int k = from + 1; k < to; ++k)
         {
             float t = (float)(k - from) / (to - from);
-            Pose actual = poses[k];
-            Float3 moved = new();
-            Float3 sized = new();
 
-            for (int c = 0; c < 3; ++c)
-            {
-                moved[c] = a.Translation[c] + (b.Translation[c] - a.Translation[c]) * t;
-                sized[c] = a.Scale[c] + (b.Scale[c] - a.Scale[c]) * t;
-            }
-
-            Float4 turned = Slerp(a.Turn, b.Turn, t);
-
-            if (turned.Dot(actual.Turn) < 0.0f)
-                turned = turned.Negated();
-
-            if (!Close(moved, actual.Translation, MoveTolerance) || !Close(sized, actual.Scale, ScaleTolerance)
-                || !Close(turned, actual.Turn, TurnTolerance))
-            {
+            if (!Fits(poses[from], poses[to], poses[k], t, channel))
                 return false;
-            }
         }
 
         return true;
+    }
+
+    private static bool Fits(Pose a, Pose b, Pose actual, float t, PoseChannel channel)
+    {
+        if (channel == PoseChannel.Move)
+        {
+            Float3 moved = Lerp(a.Translation, b.Translation, t);
+
+            return Close(moved, actual.Translation, MoveTolerance);
+        }
+
+        if (channel == PoseChannel.Size)
+        {
+            Float3 sized = Lerp(a.Scale, b.Scale, t);
+
+            return Close(sized, actual.Scale, ScaleTolerance);
+        }
+
+        Float4 turned = Turned(a.Turn, b.Turn, actual.Turn, t);
+
+        return Close(turned, actual.Turn, TurnTolerance);
+    }
+
+    private static Float3 Lerp(Float3 from, Float3 to, float t)
+    {
+        Float3 between = new();
+
+        for (int c = 0; c < 3; ++c)
+            between[c] = from[c] + (to[c] - from[c]) * t;
+
+        return between;
+    }
+
+    private static Float4 Turned(Float4 from, Float4 to, Float4 actual, float t)
+    {
+        Float4 turned = Slerp(from, to, t);
+
+        return turned.Dot(actual) < 0.0f ? turned.Negated() : turned;
     }
 }

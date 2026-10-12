@@ -4,7 +4,7 @@
              x:Name="Root">
     <DockPanel Margin="0,3">
         <TextBlock DockPanel.Dock="Left" Width="96" VerticalAlignment="Center" Text="{Binding Label, ElementName=Root}" />
-        <TextBox DockPanel.Dock="Right" Width="64" Margin="8,0,0,0" VerticalAlignment="Center" HorizontalContentAlignment="Right"
+        <TextBox DockPanel.Dock="Right" Width="72" Margin="8,0,0,0" VerticalAlignment="Center" HorizontalContentAlignment="Right"
                  Text="{Binding Value, ElementName=Root, StringFormat=0.##, UpdateSourceTrigger=LostFocus}" />
         <Slider VerticalAlignment="Center" IsSnapToTickEnabled="True"
                 Minimum="{Binding Minimum, ElementName=Root}" Maximum="{Binding Maximum, ElementName=Root}"

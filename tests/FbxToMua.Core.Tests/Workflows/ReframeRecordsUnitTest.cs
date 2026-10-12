@@ -92,4 +92,64 @@ public sealed class ReframeRecordsUnitTest : IDisposable
         // Assert
         Assert.Equal(kept, reframe);
     }
+
+    [Fact]
+    public void KeyOf_TrailingSlash_NamesTheSameStage()
+    {
+        // Arrange
+        string bare = ReframeRecords.KeyOf(Uni2, "bg001");
+
+        // Act
+        string slashed = ReframeRecords.KeyOf(Uni2 + @"\", "bg001");
+
+        // Assert
+        Assert.Equal(bare, slashed);
+    }
+
+    [Fact]
+    public void Of_RecordKeptBeforeTheShadow_GetsTheShippedShadow()
+    {
+        // Arrange
+        Directory.CreateDirectory(_root);
+        string key = ReframeRecords.KeyOf(Uni2, "bg001").Replace(@"\", @"\\");
+        File.WriteAllText(Path.Combine(_root, "reframes.json"),
+            "{ \"" + key + "\": { \"Side\": 5, \"Height\": 0, \"Distance\": 0, \"Turn\": 0, \"Scale\": 1, \"Tilt\": 0 } }");
+        ReframeRecords records = InstanciarReframeRecords();
+
+        // Act
+        Reframe reframe = records.Of(Uni2, "bg001");
+
+        // Assert
+        Assert.Equal(Reframe.None with { Side = 5.0f }, reframe);
+    }
+
+    [Fact]
+    public void Keep_WithALook_GivesItBack()
+    {
+        // Arrange
+        ReframeRecords records = InstanciarReframeRecords();
+        Reframe kept = Reframe.None with { Look = new StageLook(new FogLook(true, 0.0f, 90.0f, -0.2f, -0.3f, 0.2f), BloomLook.Off with { On = true }) };
+        records.Keep(Uni2, "bg018", kept);
+
+        // Act
+        Reframe reframe = InstanciarReframeRecords().Of(Uni2, "bg018");
+
+        // Assert
+        Assert.Equal(kept, reframe);
+    }
+
+    [Fact]
+    public void Keep_ClearOfGameBloom_GivesItBack()
+    {
+        // Arrange
+        ReframeRecords records = InstanciarReframeRecords();
+        Reframe kept = Reframe.None with { Look = StageLook.Plain with { ClearOfGameBloom = true } };
+        records.Keep(Uni2, "bg018", kept);
+
+        // Act
+        Reframe reframe = InstanciarReframeRecords().Of(Uni2, "bg018");
+
+        // Assert
+        Assert.True(reframe.Look?.ClearOfGameBloom);
+    }
 }

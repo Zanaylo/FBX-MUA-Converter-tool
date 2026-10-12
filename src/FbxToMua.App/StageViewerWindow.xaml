@@ -14,7 +14,7 @@
 
         <DockPanel Grid.Column="0">
             <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}"
-                       Text="The view is BBTAG and BBCF's fight camera: eye 320 back and 100 up, 45 degree FOV, 16:9, far plane 100000. Textures are drawn without the vertex colours and the game's lighting, and the tilt preview is an approximation." />
+                       Text="The view is BBTAG and BBCF's fight camera: eye 320 back and 100 up, 45 degree FOV, 16:9, far plane 100000. Textures are drawn without the vertex colours and the game's lighting, at most 1024 pixels a side. The tilt turns the stage about the world origin, the way the game applies it." />
             <Border Background="Black">
                 <Viewbox Stretch="Uniform">
                     <Grid x:Name="Screen" Width="1280" Height="720" Background="Black" ClipToBounds="True"
@@ -32,11 +32,11 @@
         <DockPanel Grid.Column="2">
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
                 <Button Style="{StaticResource Action}" Content="Keep this framing" IsDefault="True" Click="OnKeep" />
-                <Button Style="{StaticResource Action}" Margin="0" Content="Cancel" IsCancel="True" />
+                <Button Style="{StaticResource Action}" Margin="0" Content="Cancel" IsCancel="True" Click="OnCancel" />
             </StackPanel>
 
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
+                <StackPanel Margin="0,0,18,0">
                     <TextBlock Style="{StaticResource Caption}" Margin="0,0,0,4" Text="Fight camera and fighters" />
                     <TextBlock Style="{StaticResource Hint}"
                                Text="The game moves them together, so these move the stage around them instead. Install and Export use what you keep here." />
@@ -56,9 +56,24 @@
                     <controls:NumberRow Label="P2 position" Minimum="-2500" Maximum="2500" Step="1" Value="{Binding FighterTwo}" />
                     <Button HorizontalAlignment="Left" Margin="0,8,0,0" Padding="10,4" Content="Reset fighters" Command="{Binding ResetFighters}" />
 
+                    <TextBlock Style="{StaticResource Caption}" Text="Fighters' shadow" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="The light the game casts the fighters' shadow with, kept with the framing and written to base.evb. Turn 0 throws it towards the camera, the way the game's own stages do, 180 straight back, -90 and 90 to the sides; length 0 drops it under the fighters. The game draws it into a small texture, so a short shadow looks sharpest." />
+                    <controls:NumberRow Label="Turn" Minimum="-180" Maximum="180" Step="1" Value="{Binding ShadowTurn}" />
+                    <controls:NumberRow Label="Length" Minimum="0" Maximum="3" Step="0.05" Value="{Binding ShadowLength}" />
+                    <controls:NumberRow Label="Strength" Minimum="0" Maximum="1" Step="0.05" Value="{Binding ShadowStrength}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" Text="{Binding ShadowNote}" />
+                    <Button HorizontalAlignment="Left" Margin="0,8,0,0" Padding="10,4" Content="Reset shadow" Command="{Binding ResetShadow}" />
+
+                    <TextBlock Style="{StaticResource Caption}" Text="Fog and bloom" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="BBTAG and BBCF have neither, so the export bakes them into the stage's textures. They start from the stage's own UNI2 values and are kept with the framing." />
+                    <controls:LookPanel DataContext="{Binding Look}" />
+
                     <TextBlock Style="{StaticResource Caption}" Text="View" />
                     <CheckBox Margin="0,4" Content="Free look (drag to orbit, wheel to zoom)" IsChecked="{Binding FreeLook}" />
                     <CheckBox Margin="0,4" Content="Show the fight line (ground under the fighters)" IsChecked="{Binding ShowFightLine}" />
+                    <CheckBox Margin="0,4" Content="Show the fighters' shadows" IsChecked="{Binding ShowShadows}" />
                 </StackPanel>
             </ScrollViewer>
         </DockPanel>

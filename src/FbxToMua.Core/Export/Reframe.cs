@@ -3,12 +3,20 @@ using FbxToMua.Core.Geometry;
 
 namespace FbxToMua.Core.Export;
 
-public readonly record struct Reframe(float Side, float Height, float Distance, float Turn, float Scale, float Tilt)
+public readonly record struct Reframe(float Side, float Height, float Distance, float Turn, float Scale, float Tilt,
+    float ShadowTurn = 0.0f, float ShadowLength = Reframe.ShippedShadowLength, float ShadowStrength = Reframe.ShippedShadowStrength,
+    StageLook? Look = null)
 {
+    public const float ShippedShadowLength = 1000.0f / 900.0f;
+    public const float ShippedShadowStrength = 0.75f;
     private const float Unscaled = 1.0f;
     private const double DegreesToRadians = Math.PI / 180.0;
 
-    public static Reframe None => new(0.0f, 0.0f, 0.0f, 0.0f, Unscaled, 0.0f);
+    public Reframe() : this(0.0f, 0.0f, 0.0f, 0.0f, Unscaled, 0.0f)
+    {
+    }
+
+    public static Reframe None => new();
 
     [JsonIgnore]
     public bool IsNone => this == None;

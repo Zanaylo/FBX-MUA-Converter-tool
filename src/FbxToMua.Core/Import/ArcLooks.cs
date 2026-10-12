@@ -12,12 +12,16 @@ public static class ArcLooks
     public const double Uni2Character = 0.132;
     public const double Uni2EyeHeight = 280.0 / 360.0;
 
-    private const string StageBlock =
-        "\tIsFog = 0,\r\n\tFogStart = 0.0,\r\n\tFogEnd = 100.0,\r\n\tFogColor = [ 0.0, 0.0, 0.0, 0.0 ],\r\n\tMSAA = 4,\r\n" +
-        "\tStageW = 4096,\r\n\tIsBloom = 0,\r\n\tShadowLightType = 0,\r\n\tShadowReflexColor = [ 0.0, 0.0, 0.0, 0.0 ],\r\n" +
-        "\tShadowScale = 0.6,\r\n\tShadowAlpha = 0.7,\r\n\tBGBloomEnable = 1,\r\n\tBGBloomBlightness = 0.8,\r\n\tBGBloomPower = 2.0,\r\n" +
-        "\tBGBloomBiassR = 1.0,\r\n\tBGBloomBiassG = 1.0,\r\n\tBGBloomBiassB = 1.0,\r\n\tBGBloomBlurRadius = 1.0,\r\n" +
-        "\tBGBloomTextureSize = 256,\r\n\tBGBloomAlpha = 0.5,\r\n\tBGTinyFXAAEnable = 0,\r\n\tBGTinyFXAAThreshold = 0.2,\r\n\tBGTinyFXAALerpT = 0.5,\r\n";
+    private const string NumberFormat = "0.0##";
+    private const string Lit = "1.0";
+    private const string Unlit = "0.0";
+
+    private const string StageSettings =
+        "\tMSAA = 4,\r\n\tStageW = 4096,\r\n\tIsBloom = 0,\r\n\tShadowLightType = 0,\r\n\tShadowReflexColor = [ 0.0, 0.0, 0.0, 0.0 ],\r\n" +
+        "\tShadowScale = 0.6,\r\n\tShadowAlpha = 0.7,\r\n";
+
+    private const string Finish =
+        "\tBGTinyFXAAEnable = 0,\r\n\tBGTinyFXAAThreshold = 0.2,\r\n\tBGTinyFXAALerpT = 0.5,\r\n";
 
     private static readonly ArcLook[] BbtagLooks =
     [
@@ -63,7 +67,7 @@ public static class ArcLooks
         return looks?.FirstOrDefault(look => string.Equals(look.Stage, stage, StringComparison.OrdinalIgnoreCase));
     }
 
-    public static string Block(string stage, GameKind game, float tilt = 0.0f)
+    public static string Block(string stage, GameKind game, float tilt = 0.0f, StageLook? look = null)
     {
         Lens lens = LensOf(game);
         double size = Of(game, stage)?.Size ?? 1.0;
@@ -78,6 +82,26 @@ public static class ArcLooks
             + string.Format(invariant, "\tFOV = {0:F1},\r\n", lens.Fov)
             + string.Format(invariant, "\tViewRotationX = {0:F1},\r\n", tilt)
             + string.Format(invariant, "\tVanishingPoint = {0:F4},\r\n", vanish)
-            + StageBlock;
+            + FogLines((look ?? StageLook.Imported).Fog)
+            + StageSettings
+            + BloomLines((look ?? StageLook.Imported).Bloom)
+            + Finish;
+    }
+
+    private static string Number(float value) => value.ToString(NumberFormat, CultureInfo.InvariantCulture);
+
+    private static string Switch(bool on) => on ? "1" : "0";
+
+    private static string FogLines(FogLook fog)
+    {
+        return $"\tIsFog = {Switch(fog.On)},\r\n\tFogStart = {Number(fog.Start)},\r\n\tFogEnd = {Number(fog.End)},\r\n"
+            + $"\tFogColor = [ {Number(fog.Red)}, {Number(fog.Green)}, {Number(fog.Blue)}, {(fog.On ? Lit : Unlit)} ],\r\n";
+    }
+
+    private static string BloomLines(BloomLook bloom)
+    {
+        return $"\tBGBloomEnable = {Switch(bloom.On)},\r\n\tBGBloomBlightness = {Number(bloom.Brightness)},\r\n\tBGBloomPower = {Number(bloom.Power)},\r\n"
+            + $"\tBGBloomBiassR = {Number(bloom.Red)},\r\n\tBGBloomBiassG = {Number(bloom.Green)},\r\n\tBGBloomBiassB = {Number(bloom.Blue)},\r\n"
+            + $"\tBGBloomBlurRadius = {Number(bloom.Radius)},\r\n\tBGBloomTextureSize = 256,\r\n\tBGBloomAlpha = {Number(bloom.Strength)},\r\n";
     }
 }
